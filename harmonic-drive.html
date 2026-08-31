@@ -10,6 +10,9 @@
         margin: 0;
         padding: 0;
       }
+      label {
+        font-weight: bold;
+      }
       .control-panel {
         display: grid;
         position: fixed;
@@ -35,7 +38,10 @@
         border: none;
         border-top: 1px solid grey;
       }
-      .control-panel > .controls {
+      .control-panel > .prop-group_header {
+        margin: 0;
+        font: inherit;
+        font-weight: bold;
         grid-column: 1 / 4;
       }
       .sub-grid {
@@ -81,76 +87,84 @@
   </head>
   <body>
     <div class="control-panel">
-      <div class="controls">
+      <div class="prop-group_header">
         <h1>Генератор волнового редуктора с промежуточными <br />телами качения</h1>
       </div>
-      <strong class="second">Передаточное отношение:</strong>
+      <label class="second">Передаточное отношение:</label>
       <span
-        ><abbr id="label_gear-ratio_num">8</abbr> : <abbr id="label_gear-ratio_denom">1</abbr> =
-        <output id="label_gear-ratio">8</output>
+        ><output id="out_gearRatioNum">8</output> : <output id="out_gearRatioDenom">1</output> =
+        <output id="out_gearRatio">8</output>
       </span>
-      <strong class="second">Кол-во волн жесткого колеса:</strong>
-      <output id="z-hard">9</output>
+      <label class="second">Волн жёсткого колеса:</label>
+      <output id="out_zHard">9</output>
 
-      <input type="checkbox" name="animation" title="Включить анимацию" />
-      <label for="rpm"><strong>Об/мин:</strong></label>
-      <input id="rpm" name="rpm" type="number" value="60" />
+      <input id="in_animation" name="animation" type="checkbox" title="Включить анимацию" />
+      <label for="in_rpm">Об/мин:</label>
+      <input  id="in_rpm" name="rpm" type="number" min="0" value="60" />
 
-      <label class="second" for="z-balls"><strong>Кол-во тел качения:</strong></label>
-      <input id="z-balls" name="z-balls" type="number" min="1" value="8" />
+      <label class="second" for="in_zBalls">Тел качения:</label>
+      <input id="in_zBalls" name="zBalls" type="number" min="1" value="8" />
 
-      <label class="second" for="z-waves"><strong>Кол-во волн волнообразователя:</strong></label>
-      <input id="z-waves" name="z-waves" type="number" min="1" value="1" />
+      <label class="second" for="in_zWaves">Волн волнообразователя:</label>
+      <input id="in_zWaves" name="zWaves" type="number" min="1" value="1" />
 
-      <label class="second" for="thickness"><strong>Толщина жесткого колеса:</strong></label>
-      <input id="thickness" name="thickness" type="number" step="0.01" min="0" value="1" />
+      <label class="second" for="in_thickness">Толщина жесткого колеса:</label>
+      <input id="in_thickness" name="thickness" type="number" step="0.01" min="0" value="1" />
 
-      <label class="second" for="sep-precision"><strong>Допуски сепаратора (±):</strong></label>
-      <input id="sep-precision" name="sep-precision" type="number" min="0" step="0.01" value="0.15" />
+      <label class="second" for="in_sepOffset">Отступ сепаратора:</label>
+      <input id="in_sepOffset" name="sepOffset" type="number" min="0" step="0.01" value="0.15" />
 
-      <label class="second" for="r-outer"><strong>Внешний радиус профиля:</strong></label>
-      <input id="r-outer" name="r-outer" type="number" min="0" step="0.01" value="11" />
+      <label class="second" for="in_rOuter">Внешний радиус профиля:</label>
+      <input id="in_rOuter" name="rOuter" type="number" min="0" step="0.01" value="11" />
       <hr />
-      <div class="controls">Базовая характеристика</div>
+      <h2 class="prop-group_header">Базовая характеристика</h2>
       <div class="sub-grid">
         <input type="radio" name="baseProperty" class="toggle-property" value="rIn" />
-        <label for="base_r-inner"><strong>Внутренний радиус профиля:</strong></label>
-        <input id="base_r-inner" name="r-inner" type="number" max="10" step="0.01" value="9.8" />
-        <output id="label_r-inner">9.8</output>
+        <label for="base_r-inner">Внутренний радиус профиля:</label>
+        <input id="in_rInner" name="rInner" type="number" max="10" step="0.01" value="9.8" />
+        <output id="out_rInner">9.8</output>
       </div>
       <div class="sub-grid">
         <input type="radio" name="baseProperty" class="toggle-property" value="e" />
-        <label for="base_e"><strong>Эксцентриситет:</strong></label>
-        <input id="base_e" name="e" type="number" step="0.01" value="0.6" />
-        <output id="label_e">0.6</output>
+        <label for="in_e">Эксцентриситет:</label>
+        <input id="in_e" name="e" type="number" step="0.01" value="0.6" />
+        <output id="out_e">0.6</output>
       </div>
       <div class="sub-grid">
         <input type="radio" name="baseProperty" class="toggle-property" value="rBall" checked />
-        <label for="base_r-ball"><strong>Радиус тел качения:</strong></label>
-        <input id="base_r-ball" name="r-ball" type="number" step="0.01" value="1.5" />
-        <output id="lable_r-ball">1.5</output>
+        <label for="in_rBall">Радиус тел качения:</label>
+        <input id="in_rBall" name="rBall" type="number" step="0.01" value="1.5" />
+        <output id="out_rBall">1.5</output>
       </div>
       <div class="sub-grid">
         <input type="radio" name="baseProperty" class="toggle-property" value="hSep" />
-        <label for="base_h-sep"><strong>Толщина сепаратора:</strong></label>
-        <input id="base_h-sep" name="h-sep" type="number" step="0.01" value="1.32" />
-        <output id="label_h-sep">1.32</output>
+        <label for="in_hSep">Толщина сепаратора:</label>
+        <input id="in_hSep" name="hSep" type="number" step="0.01" value="1.32" />
+        <output id="out_hSep">1.32</output>
       </div>
-      <div class="error" style="grid-column: 1 / 4"></div>
+      <div id="out_error" class="error" style="grid-column: 1 / 4"></div>
       <hr />
-      <div class="controls">
+      <div class="prop-group_header">
+        <label>
+          Тип профиля:
+          <select id="in_outputStyle" name="outputStyle">
+            <option value="bezier" selected>Кривая</option>
+            <option value="polyline">Ломаная</option>
+          </select>
+        </label>
+        <br />
         <button id="save" type="button">Сохранить</button>
       </div>
     </div>
     <div class="drawing">
       <svg id="drawing" version="1.1" xmlns="http://www.w3.org/2000/svg" fill="none">
-        <g id="layer-hard_wheel" stroke="#00f">
+        <g id="layer_hard-wheel" stroke="#00f">
           <path id="center" d="M-5,0 0 0V-5M5 0 0 0V5" />
-          <path id="hard_wheel" d="" />
+          <path id="hard-wheel" d="" />
         </g>
-        <g id="layer-separator" stroke="#f00"><path id="separator" d="" /></g>
-        <g id="layer-wave_gen" stroke="#f0f"><path id="wave_gen" d="" /></g>
-        <g id="layer-balls" stroke="#008"></g>
+        <g id="layer_separator" stroke="#f00"><path id="separator" d="" /></g>
+        <g id="layer_wave-gen" stroke="#f0f"><path id="wave-gen" d="" /></g>
+        <g id="layer_balls" stroke="#008"></g>
       </svg>
     </div>
   </body>

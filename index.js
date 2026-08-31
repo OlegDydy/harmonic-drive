@@ -396,7 +396,7 @@ const __approxBezier = mod(() => {
  * @prop {number} zBalls Number of rolling elements
  * @prop {number} zWaves Number of waves
  * @prop {number} rOuter Outer radius of drive
- * @prop {number} sepPrecision Offset of separator
+ * @prop {number} sepOffset Offset of separator
  * @prop {HarmonicBase} baseProp Name of base property
  * @prop {number} baseValue Value of base property
  */
@@ -417,10 +417,10 @@ const __harmonicDrive = mod(() => {
 
   /** @param {HarmonicDriveProps} props @returns {HarmonicDriveDependentProps}  */
   const calcDependentProperties = (props) => {
-    const { rOuter, sepPrecision, baseValue, baseProp } = props;
+    const { rOuter, sepOffset, baseValue, baseProp } = props;
     /** Potentially this is also a property >= 1. This property works as smoothing factor for profile */
     const ballFromE = 2.5;
-    const sepConst = ballFromE - 2 * sepPrecision;
+    const sepConst = ballFromE - 2 * sepOffset;
     let rIn = 0,
       e = 0,
       rBall = 0,
@@ -957,15 +957,18 @@ function main() {
   const renderBlueprint = __renderBlueprint();
   const { gcd } = __utils();
 
+  const ENV = "development";
+
   const props = {
     thickness: $state(1),
     zBalls: $state(8),
     zWaves: $state(1),
     rOuter: $state(10),
-    sepPrecision: $state(0.15),
+    sepOffset: $state(0.15),
     baseProp: $state(/** @type {HarmonicBase} */ ("rBall")),
     baseValue: $state(1),
   };
+  const outputStyle = $state(/** @type {'polyline' | 'bezier'} */ ("polyline"));
 
   /** @returns {HarmonicDriveProps} */
   const getProps = () => ({
@@ -973,7 +976,7 @@ function main() {
     zBalls: props.zBalls(),
     zWaves: props.zWaves(),
     rOuter: props.rOuter(),
-    sepPrecision: props.sepPrecision(),
+    sepOffset: props.sepOffset(),
     baseProp: props.baseProp(),
     baseValue: props.baseValue(),
   });
@@ -985,23 +988,30 @@ function main() {
   };
 
   /** @template {Element} T @param {string} selector */
-  const $ = (selector) => /** @type {T} */ (document.querySelector(selector));
+  const $ = (selector) => {
+    const result = /** @type {T} */ (document.querySelector(selector));
+    if (ENV == "development" && !result) throw new Error("Element not found");
+    return result;
+  };
 
-  const /** @type {HTMLElement} */ oError = $(".control-panel .error");
-  const /** @type {HTMLElement} */ oGearRatioNum = $("#label_gear-ratio_num");
-  const /** @type {HTMLElement} */ oGearRatioDenom = $("#label_gear-ratio_denom");
-  const /** @type {HTMLElement} */ oGearRatio = $("#label_gear-ratio");
-  const /** @type {HTMLElement} */ oRInner = $("#label_r-inner");
-  const /** @type {HTMLElement} */ oE = $("#label_e");
-  const /** @type {HTMLElement} */ oRBall = $("#lable_r-ball");
-  const /** @type {HTMLElement} */ oHSep = $("#label_h-sep");
+  // UI targets
+  const /** @type {HTMLElement} */ oError = $("#out_error");
+  const /** @type {HTMLElement} */ oGearRatioNum = $("#out_gearRatioNum");
+  const /** @type {HTMLElement} */ oGearRatioDenom = $("#out_gearRatioDenom");
+  const /** @type {HTMLElement} */ oGearRatio = $("#out_gearRatio");
+  const /** @type {HTMLElement} */ oRInner = $("#out_rInner");
+  const /** @type {HTMLElement} */ oE = $("#out_e");
+  const /** @type {HTMLElement} */ oRBall = $("#out_rBall");
+  const /** @type {HTMLElement} */ oHSep = $("#out_hSep");
+  const /** @type {HTMLElement} */ oZHard = $("#out_zHard");
 
+  // SVG targets
   const /** @type {SVGPathElement} */ oCenter = $("#center");
   const /** @type {SVGPathElement} */ oDrawing = $("#drawing");
-  const /** @type {SVGPathElement} */ oHardWheel = $("#hard_wheel");
+  const /** @type {SVGPathElement} */ oHardWheel = $("#hard-wheel");
   const /** @type {SVGPathElement} */ oSeparator = $("#separator");
-  const /** @type {SVGPathElement} */ oWaveGen = $("#wave_gen");
-  const /** @type {SVGPathElement} */ oBalls = $("#layer-balls");
+  const /** @type {SVGPathElement} */ oWaveGen = $("#wave-gen");
+  const /** @type {SVGPathElement} */ oBalls = $("#layer_balls");
   const /** @type {SVGCircleElement[]} */ balls = [];
 
   const TURN = Math.PI * 2;
@@ -1060,7 +1070,7 @@ function main() {
     const props = getProps();
     const { zBalls, zWaves, thickness, rOuter } = props;
     dependedProps = calcDependentProperties(props);
-    const { rIn, e, rBall, hSep, rDisk, error } = dependedProps;
+    const { rIn, e, rBall, hSep, rDisk, zHard, error } = dependedProps;
     const crossHairSize = 0.1 * rDisk;
 
     const common = gcd(zBalls, zWaves);
@@ -1071,6 +1081,7 @@ function main() {
     oE.innerText = roundTo(e, 6);
     oRBall.innerText = roundTo(rBall, 6);
     oHSep.innerText = roundTo(hSep, 6);
+    oZHard.innerText = "" + zHard;
 
     const offset = thickness + 1;
     const size = 2 * (rOuter + offset);
@@ -1126,7 +1137,7 @@ function main() {
   //#region Inputs
   $("button#save").addEventListener("click", () => {
     /** @todo Two export variants (polyline and bezier approximation) */
-    const drawing = renderBlueprint(getProps(), "mm", "bezier");
+    const drawing = renderBlueprint(getProps(), "mm", outputStyle());
 
     const file = new File([drawing], "harmonic-drive.svg", { type: "image/svg+xml" });
     const a = document.createElement("a");
@@ -1144,21 +1155,33 @@ function main() {
     let listener,
       unsub,
       event = "input";
-    if (input.type == "radio" || input.type == "checkbox") {
-      listener = () => {
-        value(/** @type {T} */ (input.checked));
-      };
-      unsub = $effect(() => {
-        input.checked = !!value();
-      }, [value]);
-      event = "change";
-    } else {
-      listener = () => {
-        value(/** @type {T} */ (Number(input.value)));
-      };
-      unsub = $effect(() => {
-        input.value = value().toString();
-      }, [value]);
+    switch (input.type) {
+      case "radio":
+      case "checkbox":
+        listener = () => {
+          value(/** @type {T} */ (input.checked));
+        };
+        unsub = $effect(() => {
+          input.checked = !!value();
+        }, [value]);
+        event = "change";
+        break;
+      case "number":
+        listener = () => {
+          value(/** @type {T} */ (Number(input.value)));
+        };
+        unsub = $effect(() => {
+          input.value = "" + value();
+        }, [value]);
+        break;
+      default:
+        listener = () => {
+          value(/** @type {T} */ (input.value));
+        };
+        unsub = $effect(() => {
+          input.value = "" + value();
+        }, [value]);
+        event = input instanceof HTMLSelectElement ? "change" : "input";
     }
     input.addEventListener(event, listener);
     return () => {
@@ -1180,13 +1203,14 @@ function main() {
   for (const selector of document.querySelectorAll('input[name="baseProperty"]')) {
     bindRadio(/** @type {HTMLInputElement} */ (selector), props.baseProp);
   }
-  bindValue($('input[name="animation"]'), animation);
-  bindValue($('input[name="rpm"]'), rpm);
-  bindValue($('input[name="z-balls"]'), props.zBalls);
-  bindValue($('input[name="z-waves"]'), props.zWaves);
-  bindValue($('input[name="thickness"]'), props.thickness);
-  bindValue($('input[name="sep-precision"]'), props.sepPrecision);
-  bindValue($('input[name="r-outer"]'), props.rOuter);
+  bindValue($("#in_animation"), animation);
+  bindValue($("#in_rpm"), rpm);
+  bindValue($("#in_outputStyle"), outputStyle);
+  bindValue($("#in_zBalls"), props.zBalls);
+  bindValue($("#in_zWaves"), props.zWaves);
+  bindValue($("#in_thickness"), props.thickness);
+  bindValue($("#in_sepOffset"), props.sepOffset);
+  bindValue($("#in_rOuter"), props.rOuter);
 
   let prevBase = props.baseProp();
   $effect(() => {
@@ -1197,21 +1221,21 @@ function main() {
     switch (prevBase) {
       case "rBall":
         props.baseValue(prevDerived.rBall);
-        return bindValue($('input[name="r-ball"]'), props.baseValue);
+        return bindValue($("#in_rBall"), props.baseValue);
       case "rIn":
         props.baseValue(prevDerived.rIn);
-        return bindValue($('input[name="r-inner"]'), props.baseValue);
+        return bindValue($("#in_rInner"), props.baseValue);
       case "e":
         props.baseValue(prevDerived.e);
-        return bindValue($('input[name="e"]'), props.baseValue);
+        return bindValue($("#in_e"), props.baseValue);
       case "hSep":
         props.baseValue(prevDerived.hSep);
-        return bindValue($('input[name="h-sep"]'), props.baseValue);
+        return bindValue($("#in_hSep"), props.baseValue);
     }
   }, [props.baseProp]);
 
   $effect(() => {
-    const /** @type {HTMLInputElement} */ iRInner = $('input[name="r-inner"]');
+    const /** @type {HTMLInputElement} */ iRInner = $("#in_rInner");
     iRInner.max = "" + props.rOuter();
   }, [props.rOuter]);
   //#endregion
