@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Волновой редуктор</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      .control-panel {
+        display: grid;
+        position: fixed;
+        left: 10px;
+        top: 10px;
+        border-radius: 8px;
+        padding: 16px 10px;
+        grid-template-columns: auto 1fr auto;
+        box-shadow: 1px 2px 6px #0008;
+        gap: 4px;
+        background: #fff;
+      }
+      .control-panel h1 {
+        font-size: 1.2rem;
+        margin-top: 0;
+      }
+      .control-panel > .second {
+        grid-column: 2 / 3;
+      }
+      .control-panel > hr {
+        grid-column: 1 / 4;
+        width: 100%;
+        border: none;
+        border-top: 1px solid grey;
+      }
+      .control-panel > .controls {
+        grid-column: 1 / 4;
+      }
+      .sub-grid {
+        display: grid;
+        grid-column: 1 / 4;
+        grid-row: span 1;
+        grid-template-columns: subgrid;
+      }
+      .toggle-property:not(:checked) ~ input,
+      .toggle-property:checked ~ output {
+        display: none;
+        visibility: hidden;
+      }
+      .toggle-property:not(:checked) ~ output,
+      .toggle-property:checked ~ input {
+        display: initial;
+        visibility: visible;
+      }
+      .drawing {
+        height: 100vh;
+        background: 50% 50%
+          url('data:image/svg+xml,<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg width="16" height="16" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M0 0H16V16H0Z" fill="ghostwhite"/><path d="M8.5 16V0M0 8.5H16" fill="none" stroke="lightgray"/></svg>');
+      }
+      .drawing > svg {
+        width: 100%;
+        height: 100%;
+      }
+      .error {
+        display: none;
+        visibility: hidden;
+        padding: 4px 8px;
+        border-radius: 4px;
+        background-color: #ff4f4f;
+        color: #fff;
+        text-align: center;
+      }
+      .error:not(:empty) {
+        display: block;
+        visibility: visible;
+      }
+    </style>
+    <script src="index.js"></script>
+  </head>
+  <body>
+    <div class="control-panel">
+      <div class="controls">
+        <h1>Генератор волнового редуктора с промежуточными <br />телами качения</h1>
+      </div>
+      <strong class="second">Передаточное отношение:</strong>
+      <span
+        ><abbr id="label_gear-ratio_num">8</abbr> : <abbr id="label_gear-ratio_denom">1</abbr> =
+        <output id="label_gear-ratio">8</output>
+      </span>
+      <strong class="second">Кол-во волн жесткого колеса:</strong>
+      <output id="z-hard">9</output>
+
+      <input type="checkbox" name="animation" title="Включить анимацию" />
+      <label for="rpm"><strong>Об/мин:</strong></label>
+      <input id="rpm" name="rpm" type="number" value="60" />
+
+      <label class="second" for="z-balls"><strong>Кол-во тел качения:</strong></label>
+      <input id="z-balls" name="z-balls" type="number" min="1" value="8" />
+
+      <label class="second" for="z-waves"><strong>Кол-во волн волнообразователя:</strong></label>
+      <input id="z-waves" name="z-waves" type="number" min="1" value="1" />
+
+      <label class="second" for="thickness"><strong>Толщина жесткого колеса:</strong></label>
+      <input id="thickness" name="thickness" type="number" step="0.01" min="0" value="1" />
+
+      <label class="second" for="sep-precision"><strong>Допуски сепаратора (±):</strong></label>
+      <input id="sep-precision" name="sep-precision" type="number" min="0" step="0.01" value="0.15" />
+
+      <label class="second" for="r-outer"><strong>Внешний радиус профиля:</strong></label>
+      <input id="r-outer" name="r-outer" type="number" min="0" step="0.01" value="11" />
+      <hr />
+      <div class="controls">Базовая характеристика</div>
+      <div class="sub-grid">
+        <input type="radio" name="baseProperty" class="toggle-property" value="rIn" />
+        <label for="base_r-inner"><strong>Внутренний радиус профиля:</strong></label>
+        <input id="base_r-inner" name="r-inner" type="number" max="10" step="0.01" value="9.8" />
+        <output id="label_r-inner">9.8</output>
+      </div>
+      <div class="sub-grid">
+        <input type="radio" name="baseProperty" class="toggle-property" value="e" />
+        <label for="base_e"><strong>Эксцентриситет:</strong></label>
+        <input id="base_e" name="e" type="number" step="0.01" value="0.6" />
+        <output id="label_e">0.6</output>
+      </div>
+      <div class="sub-grid">
+        <input type="radio" name="baseProperty" class="toggle-property" value="rBall" checked />
+        <label for="base_r-ball"><strong>Радиус тел качения:</strong></label>
+        <input id="base_r-ball" name="r-ball" type="number" step="0.01" value="1.5" />
+        <output id="lable_r-ball">1.5</output>
+      </div>
+      <div class="sub-grid">
+        <input type="radio" name="baseProperty" class="toggle-property" value="hSep" />
+        <label for="base_h-sep"><strong>Толщина сепаратора:</strong></label>
+        <input id="base_h-sep" name="h-sep" type="number" step="0.01" value="1.32" />
+        <output id="label_h-sep">1.32</output>
+      </div>
+      <div class="error" style="grid-column: 1 / 4"></div>
+      <hr />
+      <div class="controls">
+        <button id="save" type="button">Сохранить</button>
+      </div>
+    </div>
+    <div class="drawing">
+      <svg id="drawing" version="1.1" xmlns="http://www.w3.org/2000/svg" fill="none">
+        <g id="layer-hard_wheel" stroke="#00f">
+          <path id="center" d="M-5,0 0 0V-5M5 0 0 0V5" />
+          <path id="hard_wheel" d="" />
+        </g>
+        <g id="layer-separator" stroke="#f00"><path id="separator" d="" /></g>
+        <g id="layer-wave_gen" stroke="#f0f"><path id="wave_gen" d="" /></g>
+        <g id="layer-balls" stroke="#008"></g>
+      </svg>
+    </div>
+  </body>
+</html>
