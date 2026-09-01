@@ -413,6 +413,7 @@ const __approxBezier = mod(() => {
 const __harmonicDrive = mod(() => {
   const { Vec2, Mat2d } = __glMatrix();
   const { approximate } = __approxBezier();
+  const { roundTo } = __utils();
   const { asin, atan2, sin, cos, sqrt, pow, PI } = Math;
 
   /** @param {HarmonicDriveProps} props @returns {HarmonicDriveDependentProps}  */
@@ -460,7 +461,7 @@ const __harmonicDrive = mod(() => {
     const rDisk = rIn + e - 2 * rBall;
 
     if (rIn < (1.03 * (2 * rBall)) / sin(PI / zHard)) {
-      error = "Привод с заданными параметрами не может быть построен";
+      error = "Редуктор с заданными параметрами не может быть построен";
     }
     return { rIn, e, rBall, hSep, zHard, rDisk, error };
   };
@@ -517,6 +518,9 @@ const __harmonicDrive = mod(() => {
     return result;
   };
 
+  /** @param {Vec2Like} pt */
+  const roundPt = ([x, y]) => `${roundTo(x, 6)},${roundTo(y, 6)}`;
+
   /**
    * @param {number} waves
    * @param {number} pointsPerHalfWave
@@ -535,7 +539,7 @@ const __harmonicDrive = mod(() => {
     let lastPoint = evalWavePoint(0, waves, side, rBall, rSq, e);
     const firstPoint = lastPoint;
 
-    let path = `M${lastPoint[0]},${lastPoint[1]}`;
+    let path = `M${roundPt(lastPoint)}`;
     if (approx) {
       const pathPts = [lastPoint];
 
@@ -559,14 +563,14 @@ const __harmonicDrive = mod(() => {
           .slice(0, -1),
       );
 
-      path = `M${bez[0][0]},${bez[0][1]}C`;
+      path = `M${roundPt(bez[0])}C`;
       bez.shift();
 
       /** @type {Mat2dLike} */
       const rot = [1, 0, 0, 1, 0, 0];
       for (let i = 0; i < waves; ++i) {
         Mat2d.fromRotation(rot, (PI * 2 * i) / waves);
-        path += " " + bez.map((pt) => Vec2.transformMat2d(tmp, pt, rot).join(",")).join(" ");
+        path += ` ${bez.map((pt) => roundPt(Vec2.transformMat2d(tmp, pt, rot))).join(" ")}`;
       }
     } else {
       for (let halfWave = 0; halfWave < halfWaves; ++halfWave) {
@@ -579,7 +583,7 @@ const __harmonicDrive = mod(() => {
         if (halfWave + 1 >= halfWaves) {
           Vec2.copy(lastPoint, firstPoint);
         }
-        path += ` ${pathPts.map(([x, y]) => `${x},${y}`).join(" ")}`;
+        path += ` ${pathPts.map(roundPt).join(" ")}`;
       }
     }
     path += "Z";
@@ -611,8 +615,8 @@ const __harmonicDrive = mod(() => {
       const rightIn = Vec2.create(inR * cos(beta - inAngle), inR * sin(beta - inAngle));
 
       path +=
-        `M${leftOut[0]},${leftOut[1]}A ${outR} ${outR} 0 ${large}1${rightOut[0]},${rightOut[1]}` +
-        `L${rightIn[0]},${rightIn[1]}A ${inR} ${inR} 0 ${large}0${leftIn[0]},${leftIn[1]}Z`;
+        `M${roundPt(leftOut)}A ${roundTo(outR, 6)} ${roundTo(outR, 6)} 0 ${large}1${roundPt(rightOut)}` +
+        `L${roundPt(rightIn)}A ${roundTo(inR, 6)} ${roundTo(inR, 6)} 0 ${large}0${roundPt(leftIn)}Z`;
     }
 
     return path;
@@ -632,7 +636,7 @@ const __harmonicDrive = mod(() => {
     for (let i = 0; i < zBalls; ++i) {
       const phiBall = (PI * 2 * i) / zBalls + phi;
       const R = l(phiBall, zHard, rSq, e);
-      result.push([R * cos(phiBall), R * sin(phiBall)]);
+      result.push([roundTo(R * cos(phiBall), 6), roundTo(R * sin(phiBall), 6)]);
     }
     return result;
   };
@@ -654,7 +658,7 @@ const __harmonicDrive = mod(() => {
 
     const hardOuter = props.rOuter + props.thickness;
     const wheelProfile = harmonicProfile(deps.zHard, points, deps, "outer", steps, samples);
-    const hardWheel = `M${hardOuter},0A 1 1 0 00${-hardOuter} 0A 1 1 0 00${hardOuter} 0z${wheelProfile}`;
+    const hardWheel = `M${roundTo(hardOuter, 6)},0A 1 1 0 00${-roundTo(hardOuter, 6)} 0A 1 1 0 00${roundTo(hardOuter, 6)} 0z${wheelProfile}`;
     const waveGenerator =
       props.zWaves <= 1
         ? `M${e + rDisk},0a${rDisk} ${rDisk} 0 00${-2 * rDisk} 0 ${rDisk} ${rDisk} 0 00${2 * rDisk} 0z`
@@ -684,10 +688,21 @@ const __utils = mod(() => {
     return a;
   };
 
-  return { gcd };
+  /** @param {number} x @param {number} precision */
+  const roundTo = (x, precision = 0) => {
+    const d = 10 ** precision;
+    return Math.round(x * d) / d;
+  };
+
+  return { gcd, roundTo };
 });
 
-/** @template [T=any] @typedef {{ (): T; on(cb: () => void): void; off(cb: () => void): void; }} Getter */
+/**
+ * @typedef {Node | string | false | null | undefined} JSXPlain
+ * @typedef {JSXPlain | JSXPlain[]} JSXElement
+ */
+/** @template {Record<string, any>} [Props={}] @typedef {(props: Props) => JSXPlain} FC */
+/** @template [T=any] @typedef {() => T} Getter */
 /** @template [T=any] @typedef {(value: T) => void} Setter */
 /** @template [T=any] @typedef {Getter<T> & Setter<T>} Accessor */
 const __jsx = mod(() => {
@@ -696,69 +711,55 @@ const __jsx = mod(() => {
 
   let /** @type {Document | XMLDocument} */ doc = document;
   let docNS = doc.lookupNamespaceURI("") || HTML_NS;
-  /** @template {keyof HTMLElementTagNameMap} Tag1 @overload @param {'http://www.w3.org/1999/xhtml'} ns @param {Tag1} root @param {(root: HTMLElementTagNameMap[Tag1]) => void} block @returns {Document} */
-  /** @template {keyof SVGElementTagNameMap} Tag2 @overload @param {'http://www.w3.org/2000/svg'} ns @param {Tag2} root @param {(root: SVGElementTagNameMap[Tag2]) => void} block @returns {Document} */
-  /** @overload @param {string} ns @param {string} root @param {(root: Element) => void} block @returns {Document} */
-  /** @param {string} ns @param {string} root @param {(root: Element) => void} block */
-  const xmlDocument = (ns, root, block) => {
-    const result = document.implementation.createDocument(ns, root);
-    const oldDoc = doc;
-    const oldNS = docNS;
-    doc = result;
-    docNS = ns;
-    try {
-      block(result.children[0]);
-      return result;
-    } finally {
-      doc = oldDoc;
-      docNS = oldNS;
+
+  /** @param {string | Node} el */
+  const materialize = (el) => {
+    return typeof el === "string" ? doc.createTextNode(el) : el;
+  };
+
+  /** @param {Node[]} chunk @param {JSXElement} value @param {Node} anchor */
+  const assignChunk = (chunk, value, anchor) => {
+    if (!Array.isArray(value)) value = [value];
+    const materialized = value.filter(/** @return {i is Node | string} */ (i) => !!i).map(materialize);
+    if (!materialized.length) materialized.push(anchor);
+
+    const end = chunk[0];
+    if (end === materialized[0]) return chunk;
+
+    const root = end.parentNode;
+    if (root) {
+      for (const child of materialized) root.insertBefore(child, end);
+      for (const child of chunk) {
+        if (child.parentElement) root.removeChild(child);
+      }
+      chunk.length = 0;
+      chunk.push(...materialized);
     }
   };
 
-  /** Enough for this app */
-  const svgSpecificTags = ["circle", "path", "metadata"];
-
-  /** @template {keyof SVGElementTagNameMap} Tag @param {Tag|SVGElementTagNameMap[Tag]} tag @param {Record<string, any>} props @returns {SVGElementTagNameMap[Tag]} */
-  const jsx = (tag, props) => {
-    let result;
-    if (typeof tag == "string") {
-      let [prefix, tagName] = tag.split(":");
-      if (tagName) {
-        const ns = doc.lookupNamespaceURI(prefix);
-        if (!ns) throw new Error(`Unknown name space prefix "${prefix}"`);
-        result = doc.createElementNS(ns, tagName);
-      } else {
-        tagName = prefix;
-        const ns = docNS === HTML_NS ? (svgSpecificTags.includes(tag) ? SVG_NS : HTML_NS) : docNS;
-        result = doc.createElementNS(ns, tagName);
-      }
-    } else {
-      result = tag;
+  /** @typedef {(() => void)[]} EffectArea */
+  let /** @type {EffectArea | null} */ currentEffectArea = null;
+  /** @param {(area: EffectArea) => void} cb @param {EffectArea | null} [parent] */
+  const effectArea = (cb, parent) => {
+    const prev = parent || currentEffectArea;
+    const /** @type {(() => void)[]} */ area = [];
+    currentEffectArea = area;
+    const dispose = () => {
+      if (prev) prev.splice(area.indexOf(dispose), 1);
+      for (const d of area) d();
+    };
+    try {
+      cb(area);
+      return dispose;
+    } finally {
+      prev?.push(dispose);
+      currentEffectArea = prev;
     }
-
-    const /** @type {Array<Node>|null} */ children = props.$ || props.children;
-    delete props.$;
-    delete props.children;
-    for (const prop in props) {
-      const [prefix, name] = prop.split(":");
-      if (name) {
-        const ns = result.lookupNamespaceURI(prefix) || doc.lookupNamespaceURI(prefix);
-        if (ns) result.setAttributeNS(ns, prop, props[prop]);
-        else result.setAttribute(prop, props[prop]);
-      } else {
-        result.setAttribute(prop, props[prop]);
-      }
-    }
-    if (children) {
-      result.append(...children.filter(Boolean));
-    }
-
-    return /** @type {SVGElementTagNameMap[Tag]} */ (result);
   };
 
   const /** @type {Set<() => void>} */ delayedUpdate = new Set();
   let enqueued = false;
-  /** @param {Set<() => void>} listeners */
+  /** @param {Iterable<() => void>} listeners */
   const queueUpdate = (listeners) => {
     for (const listener of listeners) delayedUpdate.add(listener);
 
@@ -783,54 +784,442 @@ const __jsx = mod(() => {
     }
   };
 
+  /** @typedef {{ original: {}; dispose(): void; }} WrapContext */
+  const /** @type {WeakMap<{}|unknown[], WrapContext>} */ wrapped = new WeakMap();
+
+  /** @param {any} obj @param {() => void} [onChange] */
+  const wrap = (obj, onChange) => {
+    if (!obj || typeof obj != "object") return obj;
+
+    const /** @type {WrapContext} */ ctx = {
+        original: obj,
+        dispose() {
+          onChange = undefined;
+        },
+      };
+    wrapped.set(obj, ctx);
+
+    return new Proxy(obj, {
+      set(target, prop, newValue, receiver) {
+        if (newValue !== target[prop]) {
+          onChange?.();
+        }
+        return Reflect.set(target, prop, newValue, receiver);
+      },
+    });
+  };
+
+  /** @param {any} obj */
+  const unwrap = (obj) => wrapped.get(obj)?.original || obj;
+
+  /**
+   * @typedef {{ v: number }} Versioned
+   * @typedef {() => void} Listener
+   * @typedef {{ s: Set<Getter & Versioned>; l: Set<Set<Listener>> }} Derived
+   */
+  let nextVersion = 0;
+  const /** @type {WeakMap<Getter, Set<Set<Listener>>>} */ stateSources = new WeakMap();
+  let /** @type {null | Derived} */ currentDerived = null;
   /** @template T @param {T} value @returns {Accessor<T>} */
   const $state = (value) => {
     const /** @type {Set<() => void>} */ listeners = new Set();
+    const invalidate = () => {
+      result.v = ++nextVersion;
+      if (listeners.size) queueUpdate(listeners);
+    };
+    value = wrap(unwrap(value), invalidate);
+
     /** @param {[] | [T]} args */
     const result = (...args) => {
       if (!args.length) {
+        if (currentDerived) {
+          currentDerived.s.add(result);
+          currentDerived.l.add(listeners);
+        }
         return value;
       }
 
       if (args[0] === value) return;
 
-      value = args[0];
-      queueUpdate(listeners);
-    };
-    /** @param {() => void} cb */
-    result.on = (cb) => listeners.add(cb);
-    /** @param {() => void} cb */
-    result.off = (cb) => listeners.delete(cb);
+      const prev = wrapped.get(/** @type {{}} */ (value));
+      if (prev) prev.dispose();
 
-    return /** @type {Accessor<T>} */ (result);
+      value = wrap(unwrap(args[0]), invalidate);
+      invalidate();
+    };
+    result.v = ++nextVersion;
+
+    return /** @type {Accessor<T> } */ (result);
   };
 
-  /** @param {() => void | (() => void)} cb @param {Getter[]} deps */
-  const $effect = (cb, deps) => {
-    let /** @type {void | null | (() => void)} */ cleanup = null;
-    const wrapper = () => {
-      if (cleanup) cleanup();
+  /** @template T @param {(v: T) => T} change */
+  const _derivedNode = (change) => {
+    let value = /** @type {T} */ (/** @type {unknown} */ (null));
+    const /** @type {Derived} */ node = { s: new Set(), l: new Set() };
+    const result = () => {
+      const prev = currentDerived;
+      currentDerived = node;
+      try {
+        if (!node.s.size || [...node.s].some((s) => (s(), s.v > result.v))) {
+          node.l.clear();
+          node.s.clear();
+          value = change(value);
+        }
+        if (prev) {
+          prev.s.add(result);
+          for (const l of node.l) prev.l.add(l);
+        }
 
-      cleanup = cb();
+        return value;
+      } finally {
+        currentDerived = prev;
+      }
+    };
+    stateSources.set(result, node.l);
+    result.v = -1;
+    return result;
+  };
+
+  /** @template T @param {() => T} cb @returns {Getter<T>} */
+  const $derived = (cb) => {
+    const result = _derivedNode((value) => {
+      const nextValue = cb();
+      if (result.v == -1 || nextValue !== value) {
+        value = nextValue;
+        result.v = ++nextVersion;
+      }
+      return value;
+    });
+
+    return result;
+  };
+
+  /** @param {() => void | (() => void)} cb */
+  const $effect = (cb) => {
+    let /** @type {void | null | (() => void)} */ destructor = null;
+    let /** @type {Set<() => void>[]} */ prevStates = [];
+    let disposed = false;
+    const clean = () => {
+      for (const listeners of prevStates) listeners.delete(listener);
+      destructor?.();
+    };
+    const dispose = () => {
+      clean();
+      destructor = null;
+      prevStates.length = 0;
+      disposed = true;
     };
 
-    wrapper();
-    for (const dep of deps) {
-      dep.on(wrapper);
+    const listener = _derivedNode((clean) => {
+      clean?.();
+      const result = cb();
+      if (!disposed) {
+        prevStates = [...(stateSources.get(listener) || [])];
+        for (const listeners of prevStates) {
+          listeners.add(listener);
+        }
+      }
+      listener.v = ++nextVersion;
+
+      return result;
+    });
+    queueUpdate([listener]);
+
+    if (currentEffectArea) currentEffectArea.push(dispose);
+    return dispose;
+  };
+
+  /** @template [T=void] @param {() => T} cb */
+  const untrack = (cb) => {
+    const prev = currentDerived;
+    currentDerived = null;
+    try {
+      return cb();
+    } finally {
+      currentDerived = prev;
+    }
+  };
+
+  /** @template {keyof HTMLElementTagNameMap} Tag1 @overload @param {'http://www.w3.org/1999/xhtml'} ns @param {Tag1} root @param {(root: HTMLElementTagNameMap[Tag1]) => void} block @returns {Document} */
+  /** @template {keyof SVGElementTagNameMap} Tag2 @overload @param {'http://www.w3.org/2000/svg'} ns @param {Tag2} root @param {(root: SVGElementTagNameMap[Tag2]) => void} block @returns {Document} */
+  /** @overload @param {string} ns @param {string} root @param {(root: Element) => void} block @returns {Document} */
+  /** @param {string} ns @param {string} root @param {(root: Element) => void} block */
+  const xmlDocument = (ns, root, block) => {
+    const result = document.implementation.createDocument(ns, root);
+    const oldDoc = doc;
+    const oldNS = docNS;
+    doc = result;
+    docNS = ns;
+    try {
+      block(result.children[0]);
+      return result;
+    } finally {
+      doc = oldDoc;
+      docNS = oldNS;
+    }
+  };
+
+  /** @param {Element} node @param {string} event @param {() => void} set @param {() => void} [get] */
+  const useListener = (node, event, set, get) => {
+    if (get)
+      $effect(() => {
+        get();
+      });
+
+    $effect(() => {
+      node.addEventListener(event, set);
+      return () => node.removeEventListener(event, set);
+    });
+  };
+
+  /** @template {string | number | boolean} T @param {HTMLInputElement} input @param {Accessor<T>} value */
+  const bindValue = (input, value) => {
+    switch (input.type) {
+      case "radio":
+      case "checkbox":
+        return useListener(
+          input,
+          "change",
+          () => value(/** @type {T} */ (input.checked)),
+          () => (input.checked = !!value()),
+        );
+      case "number":
+        return useListener(
+          input,
+          "input",
+          () => value(/** @type {T} */ (Number(input.value))),
+          () => (input.value = "" + value()),
+        );
+      default:
+        return useListener(
+          input,
+          input instanceof HTMLSelectElement ? "change" : "input",
+          () => value(/** @type {T} */ (input.value)),
+          () => (input.value = "" + value()),
+        );
+    }
+  };
+
+  /** @template {string | number | boolean} T @param {HTMLInputElement} input @param {Accessor<T>} value */
+  const bindGroup = (input, value) => {
+    return useListener(
+      input,
+      "change",
+      () => {
+        if (input.checked) value(/** @type {T} */ (input.value));
+      },
+      () => (input.checked = input.value === value()),
+    );
+  };
+
+  /** Enough for this app */
+  const svgSpecificTags = ["g", "circle", "path", "metadata"];
+
+  /** @template {keyof SVGElementTagNameMap} T @overload @param {T} tag @param {Record<string, any>} props @returns {SVGElementTagNameMap[T]} */
+  /** @template {keyof HTMLElementTagNameMap} T @overload @param {T} tag @param {Record<string, any>} props @returns {HTMLElementTagNameMap[T]} */
+  /** @overload @param {Element | string} tag @param {Record<string, any>} props @returns {Element} */
+  /** @param {Element | string} tag @param {Record<string, any>} props @returns {Element} */
+  const jsx = (tag, props) => {
+    let result;
+    if (typeof tag == "string") {
+      let [prefix, tagName] = tag.split(":");
+      if (tagName) {
+        const ns = doc.lookupNamespaceURI(prefix);
+        if (!ns) throw new Error(`Unknown name space prefix "${prefix}"`);
+        result = doc.createElementNS(ns, tagName);
+      } else {
+        tagName = prefix;
+        const ns = docNS === HTML_NS ? (svgSpecificTags.includes(tag) ? SVG_NS : HTML_NS) : docNS;
+        result = doc.createElementNS(ns, tagName);
+      }
+    } else {
+      result = tag;
     }
 
-    return () => {
-      if (cleanup) {
-        cleanup();
-        cleanup = null;
+    const /** @type {((() => JSXPlain) | JSXElement)[] | null} */ children = props.$ || props.children;
+    delete props.$;
+    delete props.children;
+    for (const prop in props) {
+      const value = props[prop];
+      const [prefix, name] = prop.split(":");
+      const ns = result.lookupNamespaceURI(prefix) || doc.lookupNamespaceURI(prefix);
+      if (prefix == "bind") {
+        switch (typeof value == "function" && name) {
+          case "value":
+            bindValue(/** @type {HTMLInputElement} */ (result), value);
+            break;
+          case "group":
+            bindGroup(/** @type {HTMLInputElement} */ (result), value);
+            break;
+          default:
+            throw new Error("Unsupported binding");
+        }
+      } else if (name && ns) {
+        if (typeof value == "function") {
+          if (name.startsWith("on")) {
+            useListener(result, name.slice(2), value);
+          } else {
+            $effect(() => {
+              const v = value();
+              if (v != null && v !== false) result.setAttributeNS(ns, prop, v);
+              else result.removeAttributeNS(ns, prop);
+            });
+          }
+        } else result.setAttributeNS(ns, prop, value);
+      } else {
+        if (typeof value == "function")
+          if (prop.startsWith("on")) {
+            useListener(result, prop.slice(2), value);
+          } else {
+            $effect(() => {
+              const v = value();
+              if (v != null && v !== false) result.setAttribute(prop, v);
+              else result.removeAttribute(prop);
+            });
+          }
+        else result.setAttribute(prop, value);
       }
-      for (const dep of deps) {
-        dep.off(wrapper);
+    }
+    if (children) {
+      for (const child of children.flat()) {
+        const value = typeof child == "function" ? child() : child;
+        if (value) result.append(value);
       }
-    };
+    }
+
+    return result;
   };
 
-  return { xmlDocument, jsx, $state, $effect };
+  /** @param {Getter} getter */
+  const $text = (getter) => {
+    const result = doc.createTextNode("");
+    $effect(() => {
+      const value = getter();
+      result.data = value ? "" + value : "";
+    });
+    return result;
+  };
+
+  /** @param {Element} target @param {() => JSXElement} render */
+  const $portal = (target, render) => {
+    const anchor = doc.createComment("");
+    const /** @type {Node[]} */ chunk = [anchor];
+    const data = render();
+    onMount(() => {
+      target.append(anchor);
+      assignChunk(chunk, data, anchor);
+
+      return () => {
+        assignChunk(chunk, [anchor], anchor);
+        chunk.length = 0;
+        target.removeChild(anchor);
+      };
+    });
+    return anchor;
+  };
+
+  /** @param {[cond: () => any, render: () => JSXElement][]} cases @param {() => JSXElement} [_default] */
+  const $switch = (cases, _default) => {
+    const anchor = doc.createComment("");
+    const /** @type {Node[]} */ chunk = [anchor];
+    const area = currentEffectArea;
+    const next = $derived(() => {
+      for (const [cond, render] of cases) {
+        if (cond()) {
+          return render;
+        }
+      }
+      return _default;
+    });
+    $effect(() => effectArea(() => assignChunk(chunk, next()?.(), anchor), area));
+    // onDestroy;
+    area?.push(() => {
+      assignChunk(chunk, [], anchor);
+      anchor.parentElement?.removeChild(anchor);
+    });
+
+    return anchor;
+  };
+
+  /** @template T @param {() => T[]} list @param {(item: T, index: number) => JSXElement} render @param {(item: T) => unknown} [key] */
+  const $each = (list, render, key) => {
+    const /** @type {Map<unknown, { chunk: Node[]; anchor: Comment; }>} */ cache = new Map();
+    const anchor = doc.createComment("");
+    const /** @type {Node[]} */ chunk = [anchor];
+    const area = currentEffectArea;
+    $effect(() =>
+      effectArea(() => {
+        const /** @type {JSXPlain[]} */ next = [];
+        for (let i = 0, _list = list(); i < _list.length; ++i) {
+          const data = render(_list[i], i);
+          if (Array.isArray(data)) next.push(...data);
+          else next.push(data);
+        }
+        assignChunk(chunk, next, anchor);
+      }, area),
+    );
+    // onDestroy
+    area?.push(() => {
+      assignChunk(chunk, [], anchor);
+      anchor.parentElement?.removeChild(anchor);
+    });
+
+    return anchor;
+  };
+
+  const E_HOOKS = "life cycle hooks can not be called outside of component";
+
+  /** @param {() => void | (() => void)} cb */
+  const onMount = (cb) => {
+    const area = currentEffectArea;
+    if (!area) throw new Error(E_HOOKS);
+
+    queueUpdate([
+      () => {
+        const cleaner = cb();
+        if (cleaner) area.push(cleaner);
+      },
+    ]);
+  };
+
+  /** @param {() => void} cb */
+  const onDestroy = (cb) => {
+    if (!currentEffectArea) throw new Error(E_HOOKS);
+
+    currentEffectArea.push(cb);
+  };
+
+  /** @param {() => JSXPlain[]} component @param {Element} target */
+  const render = (component, target) =>
+    effectArea(() => {
+      if (!target) throw new Error("Mount point is not provided");
+
+      const anchor = doc.createComment("");
+      const /** @type {Node[]} */ chunk = [anchor];
+      target.append(...chunk);
+      assignChunk(chunk, component(), anchor);
+      onDestroy(() => {
+        assignChunk(chunk, [anchor], anchor);
+        target.removeChild(anchor);
+      });
+    });
+
+  return {
+    render,
+    xmlDocument,
+    jsx,
+    onMount,
+    onDestroy,
+    $state,
+    $derived,
+    $effect,
+    $text,
+    $portal,
+    $switch,
+    $each,
+    untrack,
+    unwrap,
+  };
 });
 
 const __renderBlueprint = mod(() => {
@@ -952,10 +1341,10 @@ const __renderBlueprint = mod(() => {
 });
 
 function main() {
-  const { jsx, $state, $effect } = __jsx();
+  const { render, jsx, onMount, $text, $state, $derived, $switch, $effect } = __jsx();
   const { ballPositions, buildHarmonicDrive, calcDependentProperties } = __harmonicDrive();
   const renderBlueprint = __renderBlueprint();
-  const { gcd } = __utils();
+  const { gcd, roundTo } = __utils();
 
   const ENV = "development";
 
@@ -981,12 +1370,6 @@ function main() {
     baseValue: props.baseValue(),
   });
 
-  /** @param {number} x @param {number} precision */
-  const roundTo = (x, precision = 0) => {
-    const d = 10 ** precision;
-    return `${Math.trunc(x * d) / d}`;
-  };
-
   /** @template {Element} T @param {string} selector */
   const $ = (selector) => {
     const result = /** @type {T} */ (document.querySelector(selector));
@@ -995,30 +1378,45 @@ function main() {
   };
 
   // UI targets
-  const /** @type {HTMLElement} */ oError = $("#out_error");
-  const /** @type {HTMLElement} */ oGearRatioNum = $("#out_gearRatioNum");
-  const /** @type {HTMLElement} */ oGearRatioDenom = $("#out_gearRatioDenom");
-  const /** @type {HTMLElement} */ oGearRatio = $("#out_gearRatio");
-  const /** @type {HTMLElement} */ oRInner = $("#out_rInner");
-  const /** @type {HTMLElement} */ oE = $("#out_e");
-  const /** @type {HTMLElement} */ oRBall = $("#out_rBall");
-  const /** @type {HTMLElement} */ oHSep = $("#out_hSep");
-  const /** @type {HTMLElement} */ oZHard = $("#out_zHard");
+  const /** @type {HTMLElement} */ outError = $("#out_error");
+  const /** @type {HTMLElement} */ outGearRatioNum = $("#out_gearRatioNum");
+  const /** @type {HTMLElement} */ outGearRatioDenom = $("#out_gearRatioDenom");
+  const /** @type {HTMLElement} */ outGearRatio = $("#out_gearRatio");
+  const /** @type {HTMLElement} */ outRInner = $("#out_rInner");
+  const /** @type {HTMLElement} */ outE = $("#out_e");
+  const /** @type {HTMLElement} */ outRBall = $("#out_rBall");
+  const /** @type {HTMLElement} */ outHSep = $("#out_hSep");
+  const /** @type {HTMLElement} */ outZHard = $("#out_zHard");
 
   // SVG targets
-  const /** @type {SVGPathElement} */ oCenter = $("#center");
-  const /** @type {SVGPathElement} */ oDrawing = $("#drawing");
-  const /** @type {SVGPathElement} */ oHardWheel = $("#hard-wheel");
-  const /** @type {SVGPathElement} */ oSeparator = $("#separator");
-  const /** @type {SVGPathElement} */ oWaveGen = $("#wave-gen");
-  const /** @type {SVGPathElement} */ oBalls = $("#layer_balls");
+  const /** @type {SVGPathElement} */ svgDrawing = $("#drawing");
+  const /** @type {SVGPathElement} */ svgCenter = $("#center");
+  const /** @type {SVGPathElement} */ svgHardWheel = $("#hard-wheel");
+  const /** @type {SVGPathElement} */ svgSeparator = $("#separator");
+  const /** @type {SVGPathElement} */ svgWaveGen = $("#wave-gen");
+  const /** @type {SVGPathElement} */ svgBalls = $("#layer_balls");
   const /** @type {SVGCircleElement[]} */ balls = [];
+
+  const dependedProps = $derived(() => calcDependentProperties(getProps()));
+  // const divider = $derived(() => gcd(props.zBalls(), props.zWaves()));
+
+  jsx(outError, {
+    "data-test": () => dependedProps().error,
+    $: [$switch([[() => dependedProps().error, () => [dependedProps().error]]])],
+  });
+  // jsx(outGearRatioNum, { $: [$text(() => props.zBalls() / divider())] });
+  // jsx(outGearRatioDenom, { $: [$text(() => props.zWaves() / divider())] });
+  // jsx(outGearRatio, { $: [$text(() => roundTo(props.zBalls() / props.zWaves(), 6))] });
+  // jsx(outRInner, { $: [$text(() => roundTo(dependedProps().rIn, 6))] });
+  // jsx(outE, { $: [$text(() => roundTo(dependedProps().e, 6))] });
+  // jsx(outRBall, { $: [$text(() => roundTo(dependedProps().rBall, 6))] });
+  // jsx(outHSep, { $: [$text(() => roundTo(dependedProps().hSep, 6))] });
+  // jsx(outZHard, { $: [$text(() => dependedProps().zHard)] });
 
   const TURN = Math.PI * 2;
   //#region Rendering
   const rpm = $state(60);
-  let dependedProps = calcDependentProperties(getProps()),
-    phiRotor = 0;
+  let phiRotor = 0;
 
   const animation = $state(false);
 
@@ -1027,18 +1425,18 @@ function main() {
     const reductionRatio = zWaves / zBalls;
     const phi = phiRotor * reductionRatio;
 
-    const ballsPos = ballPositions(phi, zBalls, dependedProps);
+    const ballsPos = ballPositions(phi, zBalls, dependedProps());
     for (let i = 0; i < balls.length; ++i) {
       const ball = balls[i];
       const pos = ballsPos[i];
       jsx(ball, { cx: "" + pos[0], cy: "" + pos[1] });
     }
     if (phiRotor === 0) {
-      oWaveGen.removeAttribute("transform");
-      oSeparator.removeAttribute("transform");
+      svgWaveGen.removeAttribute("transform");
+      svgSeparator.removeAttribute("transform");
     } else {
-      jsx(oWaveGen, { transform: `rotate(${(-phiRotor / Math.PI) * 180})` });
-      jsx(oSeparator, { transform: `rotate(${(phi / Math.PI) * 180})` });
+      jsx(svgWaveGen, { transform: `rotate(${roundTo((-phiRotor / Math.PI) * 180, 6)})` });
+      jsx(svgSeparator, { transform: `rotate(${roundTo((phi / Math.PI) * 180, 6)})` });
     }
   };
 
@@ -1064,42 +1462,41 @@ function main() {
       phiRotor = 0;
       updateMovingParts();
     };
-  }, [animation]);
+  });
 
   $effect(() => {
     const props = getProps();
     const { zBalls, zWaves, thickness, rOuter } = props;
-    dependedProps = calcDependentProperties(props);
-    const { rIn, e, rBall, hSep, rDisk, zHard, error } = dependedProps;
+    const { rIn, e, rBall, hSep, rDisk, zHard, error } = dependedProps();
     const crossHairSize = 0.1 * rDisk;
 
     const common = gcd(zBalls, zWaves);
-    oGearRatioNum.innerText = (zBalls / common).toString();
-    oGearRatioDenom.innerText = (zWaves / common).toString();
-    oGearRatio.innerText = roundTo(zBalls / zWaves, 6);
-    oRInner.innerText = roundTo(rIn, 6);
-    oE.innerText = roundTo(e, 6);
-    oRBall.innerText = roundTo(rBall, 6);
-    oHSep.innerText = roundTo(hSep, 6);
-    oZHard.innerText = "" + zHard;
+    outGearRatioNum.innerText = (zBalls / common).toString();
+    outGearRatioDenom.innerText = (zWaves / common).toString();
+    outGearRatio.innerText = "" + roundTo(zBalls / zWaves, 6);
+    outRInner.innerText = "" + roundTo(rIn, 6);
+    outE.innerText = "" + roundTo(e, 6);
+    outRBall.innerText = "" + roundTo(rBall, 6);
+    outHSep.innerText = "" + roundTo(hSep, 6);
+    outZHard.innerText = "" + zHard;
 
     const offset = thickness + 1;
     const size = 2 * (rOuter + offset);
     if (!error) {
-      oError.innerHTML = "";
+      // outError.innerHTML = "";
       const drive = buildHarmonicDrive(props, { points: 64, samples: 32, steps: 100 });
 
-      const box = oDrawing.getBoundingClientRect();
-      jsx(oDrawing, {
+      const box = svgDrawing.getBoundingClientRect();
+      jsx(svgDrawing, {
         viewBox: `-${rOuter + offset} -${rOuter + offset} ${size} ${size}`,
         width: `${size}px`,
         height: `${size}px`,
         "stroke-width": (size / Math.min(box.width, box.height)).toString(),
       });
-      jsx(oCenter, { d: `M-${crossHairSize},0 0 0V-${crossHairSize}M${crossHairSize} 0 0 0V${crossHairSize}` });
-      jsx(oHardWheel, { d: drive.hardWheel });
-      jsx(oSeparator, { d: drive.separator });
-      jsx(oWaveGen, { d: drive.waveGenerator });
+      jsx(svgCenter, { d: `M-${crossHairSize},0 0 0V-${crossHairSize}M${crossHairSize} 0 0 0V${crossHairSize}` });
+      jsx(svgHardWheel, { d: drive.hardWheel });
+      jsx(svgSeparator, { d: drive.separator });
+      jsx(svgWaveGen, { d: drive.waveGenerator });
 
       if (zBalls < balls.length) {
         for (let i = zBalls; i < balls.length; ++i) {
@@ -1113,7 +1510,7 @@ function main() {
         if (!ball) {
           ball = jsx("circle", {});
           balls[i] = ball;
-          oBalls.appendChild(ball);
+          svgBalls.appendChild(ball);
         }
         jsx(ball, {
           cx: ballPos[0].toString(),
@@ -1122,20 +1519,20 @@ function main() {
         });
       }
 
-      oBalls.style.removeProperty("display");
+      svgBalls.style.removeProperty("display");
       updateMovingParts();
     } else {
-      oError.innerText = error;
-      jsx(oHardWheel, { d: "" });
-      jsx(oSeparator, { d: "" });
-      jsx(oWaveGen, { d: "" });
-      oBalls.style.display = "none";
+      // outError.innerText = error;
+      jsx(svgHardWheel, { d: "" });
+      jsx(svgSeparator, { d: "" });
+      jsx(svgWaveGen, { d: "" });
+      svgBalls.style.display = "none";
     }
-  }, Object.values(props));
+  });
   //#endregion
 
   //#region Inputs
-  $("button#save").addEventListener("click", () => {
+  const download = () => {
     /** @todo Two export variants (polyline and bezier approximation) */
     const drawing = renderBlueprint(getProps(), "mm", outputStyle());
 
@@ -1148,69 +1545,26 @@ function main() {
     a.click();
     URL.revokeObjectURL(a.href);
     a.remove();
-  });
-
-  /** @template {string | number | boolean} T @param {HTMLInputElement} input @param {Accessor<T>} value */
-  const bindValue = (input, value) => {
-    let listener,
-      unsub,
-      event = "input";
-    switch (input.type) {
-      case "radio":
-      case "checkbox":
-        listener = () => {
-          value(/** @type {T} */ (input.checked));
-        };
-        unsub = $effect(() => {
-          input.checked = !!value();
-        }, [value]);
-        event = "change";
-        break;
-      case "number":
-        listener = () => {
-          value(/** @type {T} */ (Number(input.value)));
-        };
-        unsub = $effect(() => {
-          input.value = "" + value();
-        }, [value]);
-        break;
-      default:
-        listener = () => {
-          value(/** @type {T} */ (input.value));
-        };
-        unsub = $effect(() => {
-          input.value = "" + value();
-        }, [value]);
-        event = input instanceof HTMLSelectElement ? "change" : "input";
-    }
-    input.addEventListener(event, listener);
-    return () => {
-      unsub;
-      input.removeEventListener(event, listener);
-    };
   };
 
-  /** @template {string | number | boolean} T @param {HTMLInputElement} input @param {Accessor<T>} value */
-  const bindRadio = (input, value) => {
-    input.addEventListener("change", () => {
-      value(/** @type {T} */ (input.value));
-    });
-    return $effect(() => {
-      input.checked = input.value === value();
-    }, [value]);
-  };
+  jsx($("button#save"), { onclick: download });
 
   for (const selector of document.querySelectorAll('input[name="baseProperty"]')) {
-    bindRadio(/** @type {HTMLInputElement} */ (selector), props.baseProp);
+    jsx(selector, { "bind:group": props.baseProp });
   }
-  bindValue($("#in_animation"), animation);
-  bindValue($("#in_rpm"), rpm);
-  bindValue($("#in_outputStyle"), outputStyle);
-  bindValue($("#in_zBalls"), props.zBalls);
-  bindValue($("#in_zWaves"), props.zWaves);
-  bindValue($("#in_thickness"), props.thickness);
-  bindValue($("#in_sepOffset"), props.sepOffset);
-  bindValue($("#in_rOuter"), props.rOuter);
+  jsx($("#in_animation"), { "bind:value": animation });
+  jsx($("#in_rpm"), { "bind:value": rpm });
+  jsx($("#in_outputStyle"), { "bind:value": outputStyle });
+  jsx($("#in_zBalls"), { "bind:value": props.zBalls });
+  jsx($("#in_zWaves"), { "bind:value": props.zWaves });
+  jsx($("#in_thickness"), { "bind:value": props.thickness });
+  jsx($("#in_sepOffset"), { "bind:value": props.sepOffset });
+  jsx($("#in_rOuter"), { "bind:value": props.rOuter });
+
+  jsx($("#in_rBall"), { "bind:value": props.baseValue });
+  jsx($("#in_rInner"), { "bind:value": props.baseValue });
+  jsx($("#in_e"), { "bind:value": props.baseValue });
+  jsx($("#in_hSep"), { "bind:value": props.baseValue });
 
   let prevBase = props.baseProp();
   $effect(() => {
@@ -1221,23 +1575,23 @@ function main() {
     switch (prevBase) {
       case "rBall":
         props.baseValue(prevDerived.rBall);
-        return bindValue($("#in_rBall"), props.baseValue);
+        break;
       case "rIn":
         props.baseValue(prevDerived.rIn);
-        return bindValue($("#in_rInner"), props.baseValue);
+        break;
       case "e":
         props.baseValue(prevDerived.e);
-        return bindValue($("#in_e"), props.baseValue);
+        break;
       case "hSep":
         props.baseValue(prevDerived.hSep);
-        return bindValue($("#in_hSep"), props.baseValue);
+        break;
     }
-  }, [props.baseProp]);
+  });
 
   $effect(() => {
     const /** @type {HTMLInputElement} */ iRInner = $("#in_rInner");
     iRInner.max = "" + props.rOuter();
-  }, [props.rOuter]);
+  });
   //#endregion
 }
 document.addEventListener("DOMContentLoaded", main);
