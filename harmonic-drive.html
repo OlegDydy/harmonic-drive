@@ -83,10 +83,24 @@
         visibility: visible;
       }
     </style>
-    <script src="index.js"></script>
+    <script src="src/mini-modules.js"></script>
+    <!-- Bundle -->
+    <script src="src/app/exports/dxf.js"></script>
+    <script src="src/app/exports/svg.js"></script>
+    <script src="src/app/harmonicDrive.js"></script>
+    <script src="src/app/index.js"></script>
+    <script src="src/app/store.js"></script>
+    <script src="src/core/jsx.js"></script>
+    <script src="src/utils/approxBezier.js"></script>
+    <script src="src/utils/gl-matrix.js"></script>
+    <script src="src/utils/index.js"></script>
+    <script src="src/config.js"></script>
+    <script src="src/mini-modules.js"></script>
+    <script src="src/index.js"></script>
   </head>
   <body>
     <div class="control-panel">
+      <div id="app" style="display: none"></div>
       <div class="prop-group_header">
         <h1>Генератор волнового редуктора с промежуточными <br />телами качения</h1>
       </div>
@@ -153,17 +167,18 @@
           </select>
         </label>
         <br />
-        <button id="save" type="button">Сохранить</button>
+        <button id="save-svg" type="button">Сохранить SVG</button>
+        <button id="save-dxf" type="button">Сохранить DXF</button>
       </div>
     </div>
     <div class="drawing">
-      <svg id="drawing" version="1.1" xmlns="http://www.w3.org/2000/svg" fill="none">
+      <svg id="drawing" fill="none" stroke-width="1">
         <g id="layer_hard-wheel" stroke="#00f">
-          <path id="center" d="M-5,0 0 0V-5M5 0 0 0V5" />
-          <path id="hard-wheel" d="" />
+          <path id="center" vector-effect="non-scaling-stroke" d="M-5,0 0 0V-5M5 0 0 0V5" />
+          <path id="hard-wheel" vector-effect="non-scaling-stroke" d="" />
         </g>
-        <g id="layer_separator" stroke="#f00"><path id="separator" d="" /></g>
-        <g id="layer_wave-gen" stroke="#f0f"><path id="wave-gen" d="" /></g>
+        <g id="layer_separator" stroke="#f00"><path id="separator" vector-effect="non-scaling-stroke" d="" /></g>
+        <g id="layer_wave-gen" stroke="#f0f"><path id="wave-gen" vector-effect="non-scaling-stroke" d="" /></g>
         <g id="layer_balls" stroke="#008"></g>
       </svg>
     </div>

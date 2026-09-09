@@ -1,21 +1,26 @@
-// @ts-check
-// TODO: integrate DXF export
+/**
+ * @typedef {{ type: 'circle'; cx: number; cy: number; r: number }} PartCircle
+ * @typedef {{ type: 'polyline'; points: Vec2Like[]; closed: boolean }} PartPolyline
+ * @typedef {{ type: 'spline'; points: Vec2Like[]; closed: boolean }} PartSpline
+ * @typedef {{ type: 'arc'; c: Vec2Like; r: number; start: number; end: number; }} PartArc
+ * @typedef {PartCircle | PartPolyline | PartSpline | PartArc} Part
+ */
+const __app_exports_dxf = mod(async () => {
+  const { Vec2 } = await __utils_glMatrix();
+  const { buildHarmonicDrive, calcDependentProperties } = await __app_harmonicDrive();
 
-mod(() => {
+  const { atan2, abs, sqrt, max } = Math;
+
   /**
-   * @typedef {{ x: number; y: number }} PointLike;
    * @typedef {[ x: number, y: number, z: number ]} Vec3Like;
-   * @typedef {{ type: 'circle'; cx: number; cy: number; r: number }} PartCircle
-   * @typedef {{ type: 'polyline'; points: PointLike[]; closed: boolean }} PartPolyline
-   * @typedef {{ type: 'spline'; points: PointLike[]; closed: boolean }} PartSpline
-   * @typedef {PartCircle | PartPolyline | PartSpline} Part
    * @typedef {object} Layer
    * @prop {string} name
-   * @prop {string} color format: `#hhhhhh
+   * @prop {string} color format: `#hhhhhh`
    * @prop {Part[]} parts
    */
 
   const MIME = "application/dxf";
+  const Rad2Deg = 180 / Math.PI;
 
   /** @param {string} hex @return {Vec3Like} */
   function hexToRgb(hex) {
@@ -120,8 +125,8 @@ mod(() => {
     return String(value === 0 ? 0 : value);
   };
 
-  /** @param {PointLike} a @param {PointLike} b */
-  const samePoint = (a, b) => a === b || (a.x === b.x && a.y === b.y);
+  /** @param {Vec2Like} a @param {Vec2Like} b */
+  const samePoint = (a, b) => a === b || (a[0] === b[0] && a[1] === b[1]);
 
   /** @param {Dxf} w @param {string} layer @param {Extract<Part, { type: 'circle' }>} p  */
   const circle = (w, layer, p) => {
@@ -142,7 +147,7 @@ mod(() => {
       .g(90, pts.length)
       .g(70, p.closed ? 1 : 0);
     for (const pt of pts) {
-      w.g(10, pt.x).g(20, pt.y);
+      w.g(10, pt[0]).g(20, pt[1]);
     }
   };
 
@@ -159,7 +164,7 @@ mod(() => {
       .g(70, p.closed ? 1 : 0) // бит 0 — замкнутая
       .g(66, 0); // 2D-вершины, z = 0
     for (const p of pts) {
-      dxf.g(0, "VERTEX").g(10, p.x).g(20, p.y);
+      dxf.g(0, "VERTEX").g(10, p[0]).g(20, p[1]);
     }
     dxf.g(0, "SEQEND");
   };
@@ -188,7 +193,7 @@ mod(() => {
       .g(73, pts.length) // кол-во контрольных точек
       .g(74, 0); // без fit-данных
     for (const pt of pts) {
-      w.g(10, pt.x).g(20, pt.y);
+      w.g(10, pt[0]).g(20, pt[1]);
     }
 
     // Вектор узлов: [0,0,0,0, 1,1,1, 2,2,2, ..., (n-1),(n-1),(n-1), n,n,n,n].
@@ -202,12 +207,28 @@ mod(() => {
     w.g(40, n);
   };
 
-  /** @param {Layer[]} layers @returns {string} */
+  /** @param {Dxf} w @param {string} layer @param {Extract<Part, { type: 'arc' }>} p  */
+  const arc = (w, layer, p) => {
+    if (!(p.r > 0)) return; // вырожденный круг — пропускаем
+    w.g(0, "ARC").g(8, layer).g(10, p.c[0]).g(20, p.c[1]).g(40, p.r).g(50, p.start).g(51, p.end);
+  };
+
+  /** Some units for drawings */
+  const DXFUnitMap = {
+    none: 0,
+    in: 1,
+    ft: 2,
+    mm: 4,
+    cm: 5,
+    m: 6,
+  };
+
+  /** @param {Layer[]} layers @param {keyof typeof DXFUnitMap} unit @returns {string} */
   const exportDxf = (layers, unit = "mm") => {
     const w = new Dxf();
 
     // Проверки
-    const /** @type {Set<string} */ seen = new Set();
+    const /** @type {Set<string>} */ seen = new Set();
     for (const l of layers) {
       if (typeof l.name !== "string" || l.name === "") {
         throw new Error("Имя слоя не может быть пустым");
@@ -218,9 +239,12 @@ mod(() => {
     }
 
     // HEADER
-    w.section(
-      "HEADER",
-      (w) => w.g(9, "$ACADVER").g(1, "AC1015").g(9, "$INSUNITS").g(70, 4), // миллиметры
+    w.section("HEADER", (w) =>
+      w
+        .g(9, "$ACADVER")
+        .g(1, "AC1015")
+        .g(9, "$INSUNITS")
+        .g(70, DXFUnitMap[unit] || DXFUnitMap.none),
     );
 
     // TABLES: слои + минимальный viewport
@@ -239,8 +263,7 @@ mod(() => {
           .g(10, 0) // lower-left
           .g(20, 0) // lower-left
           .g(11, 1) // upper-right
-          .g(21, 1) // upper-right
-          .g(14, 0);
+          .g(21, 1); // upper-right
       });
     });
 
@@ -267,6 +290,7 @@ mod(() => {
         for (const p of l.parts) {
           if (p.type === "circle") circle(w, l.name, p);
           else if (p.type === "polyline") lwPolyline(w, l.name, p);
+          else if (p.type === "arc") arc(w, l.name, p);
           else spline(w, l.name, p);
         }
       }
@@ -276,5 +300,189 @@ mod(() => {
     return w.toString();
   };
 
-  return { exportDxf, MIME };
+  /** @param {string} path @returns {Part[]} */
+  const parsePath = (path) => {
+    const lexer = /([MmAaCcLlZz])|([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)/g;
+    const bit = /[01]/g;
+    let last = 0;
+    const /** @type {Vec2Like} */ cursor = [0, 0];
+    const /** @type {Vec2Like} */ start = [0, 0];
+    /** @param {RegExp} matcher */
+    const read = (matcher) => {
+      matcher.lastIndex = last;
+      const result = matcher.exec(path);
+      last = result ? matcher.lastIndex : path.length;
+      return result;
+    };
+
+    /** @type {Part[]} */
+    const result = [];
+    let /** @type {Part | null} */ lastPart = null;
+
+    const ensurePoly = () => {
+      if (lastPart?.type !== "polyline") {
+        lastPart = { type: "polyline", points: [Vec2.copy([0, 0], cursor)], closed: false };
+        result.push(lastPart);
+      }
+      return lastPart;
+    };
+
+    const ensureSpline = () => {
+      if (lastPart?.type !== "spline") {
+        lastPart = { type: "spline", points: [Vec2.copy([0, 0], cursor)], closed: false };
+        result.push(lastPart);
+      }
+      return lastPart;
+    };
+
+    /** @param {Readonly<Vec2Like>} to */
+    const ensureArc = (r, largeArc, cw, to) => {
+      const halfDist = 0.5 * Vec2.dist(cursor, to);
+      r = max(r, halfDist);
+      const c = Vec2.lerp([0, 0], cursor, to, 0.5);
+      const norm = Vec2.sub([0, 0], to, c);
+      Vec2.set(norm, -norm[1], norm[0]);
+      if (largeArc == cw) Vec2.neg(norm, norm);
+
+      const h = sqrt(max(0, r * r - halfDist * halfDist));
+      Vec2.scaleAndAdd(c, c, norm, h / halfDist);
+
+      Vec2.sub(norm, cursor, c);
+      let start = atan2(norm[1], norm[0]) * Rad2Deg;
+
+      Vec2.sub(norm, to, c);
+      let end = atan2(norm[1], norm[0]) * Rad2Deg;
+
+      if (!cw && end < start) {
+        if (abs(abs(end - start) - 180) < 1e-6) end = start + 180;
+        else [start, end] = [end, start];
+      }
+
+      lastPart = { type: "arc", c, r, start, end };
+      result.push(lastPart);
+      return to;
+    };
+
+    /** @param {string} [x] @returns {Vec2Like} */
+    const readPoint = (x) => {
+      if (!x) {
+        x = read(lexer)?.[2];
+        if (!x) throw new Error("coord x");
+      }
+      const y = read(lexer)?.[2];
+      if (!y) throw new Error("coord y");
+
+      return [+x, +y];
+    };
+
+    let mode = "M";
+    while (last < path.length) {
+      const m = read(lexer);
+      if (!m) break;
+
+      if (m[1]) {
+        mode = m[1];
+        if (
+          (mode == "Z" || mode == "z") &&
+          (Math.abs(start[0] - cursor[0]) > 1.0e-6 || Math.abs(start[1] - cursor[1]) > 1.0e-6)
+        ) {
+          lastPart = ensurePoly();
+          Vec2.copy(cursor, start);
+          lastPart.points.push(Vec2.copy([0, 0], cursor));
+          lastPart = null;
+        }
+      } else {
+        switch (mode) {
+          case "M":
+            mode = "L";
+            lastPart = null;
+            Vec2.copy(cursor, readPoint(m[2]));
+            Vec2.copy(start, cursor);
+            break;
+          case "m":
+            mode = "l";
+            lastPart = null;
+            Vec2.add(cursor, cursor, readPoint(m[2]));
+            Vec2.copy(start, cursor);
+            break;
+          case "L":
+            lastPart = ensurePoly();
+            Vec2.copy(cursor, readPoint(m[2]));
+            lastPart.points.push(Vec2.copy([0, 0], cursor));
+            break;
+          case "l":
+            lastPart = ensurePoly();
+            Vec2.add(cursor, cursor, readPoint(m[2]));
+            lastPart.points.push(Vec2.copy([0, 0], cursor));
+            break;
+          case "C":
+            console.log("[dxf] Cubic curve (abs)");
+            lastPart = ensureSpline();
+            lastPart.points.push(readPoint(m[2]));
+            lastPart.points.push(readPoint());
+            Vec2.copy(cursor, readPoint());
+            lastPart.points.push(Vec2.copy([0, 0], cursor));
+            break;
+          case "c":
+            console.log("[dxf] Cubic curve (rel)");
+            lastPart = ensureSpline();
+            lastPart.points.push(Vec2.add([0, 0], cursor, readPoint(m[2])));
+            lastPart.points.push(Vec2.add([0, 0], cursor, readPoint()));
+            Vec2.add(cursor, cursor, readPoint());
+            lastPart.points.push(Vec2.copy([0, 0], cursor));
+            break;
+          case "a":
+            readPoint(); // ry + rotation
+            Vec2.copy(
+              cursor,
+              ensureArc(+m[2], read(bit)?.[0] == "1", read(bit)?.[0] == "1", Vec2.add([0, 0], cursor, readPoint())),
+            );
+            break;
+          case "A":
+            readPoint(); // ry + rotation
+            Vec2.copy(
+              cursor,
+              ensureArc(+m[2], read(bit)?.[0] == "1", read(bit)?.[0] == "1", Vec2.copy([0, 0], readPoint())),
+            );
+            break;
+        }
+      }
+    }
+
+    return result;
+  };
+
+  /** @param {HarmonicDriveProps} props @param {keyof typeof DXFUnitMap} unit @param {"bezier" | "polyline"} style */
+  const renderDxf = (props, unit = "mm", style = "polyline") => {
+    const derived = calcDependentProperties(props);
+    const drive = buildHarmonicDrive(props, { points: 128, samples: 64, steps: style == "bezier" ? 50 : 0 });
+
+    return exportDxf(
+      [
+        {
+          name: "Жесткое колесо",
+          color: "#0000ff",
+          parts: parsePath(drive.hardWheel),
+        },
+        {
+          name: "Сепаратор",
+          color: "#ff0000",
+          parts: parsePath(drive.separator),
+        },
+        {
+          name: "Волнообразователь",
+          color: "#ff00ff",
+          parts: parsePath(drive.waveGenerator),
+        },
+        {
+          name: "Тела качения",
+          color: "#000080",
+          parts: drive.balls.map(([cx, cy]) => ({ type: "circle", cx, cy, r: derived.rBall })),
+        },
+      ],
+      unit,
+    );
+  };
+
+  return { renderDxf, exportDxf, MIME };
 });
