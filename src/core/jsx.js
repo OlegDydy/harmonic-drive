@@ -3,10 +3,11 @@
  * @typedef {JSXPlain | JSXPlain[]} JSXElement
  * @typedef {JSXElement[]} JSXChunkArray
  */
-/** @template {Record<string, any>} [Props={}] @typedef {(props: Props) => JSXElement} FC */
+/** @template {Record<string, any>} [Props={}] @template {JSXElement} [R=JSXElement] @typedef {(props: Props) => R} FC */
 /** @template [T=any] @typedef {() => T} Getter */
+/** @template [T=any] @typedef {(() => T) | T} MaybeGetter */
 /** @template [T=any] @typedef {(value: T) => void} Setter */
-/** @template [T=any] @typedef {Getter<T> & Setter<T>} Accessor */
+/** @template [T=any] @typedef {{ (): T; (v: T): void; }} Accessor */
 const __jsx = mod(() => {
   const SVG_NS = "http://www.w3.org/2000/svg",
     HTML_NS = "http://www.w3.org/1999/xhtml";
@@ -42,22 +43,22 @@ const __jsx = mod(() => {
     }
   };
 
-  /** @typedef {(() => void)[]} EffectArea */
+  /** @typedef {Set<() => void>} EffectArea */
   let /** @type {EffectArea | null} */ currentEffectArea = null;
   /** @param {(area: EffectArea) => void} cb @param {EffectArea | null} [parent] */
   const effectArea = (cb, parent) => {
     const prev = parent || currentEffectArea;
-    const /** @type {(() => void)[]} */ area = [];
+    const /** @type {Set<() => void>} */ area = new Set();
     currentEffectArea = area;
     const dispose = () => {
-      if (prev) prev.splice(area.indexOf(dispose), 1);
+      if (prev) prev.delete(dispose);
       for (const d of area) d();
     };
     try {
       cb(area);
       return dispose;
     } finally {
-      prev?.push(dispose);
+      prev?.add(dispose);
       currentEffectArea = prev;
     }
   };
@@ -108,16 +109,17 @@ const __jsx = mod(() => {
           onChange = undefined;
         },
       };
-    wrapped.set(obj, ctx);
-
-    return new Proxy(obj, {
+    const result = new Proxy(obj, {
       set(target, prop, newValue, receiver) {
         if (newValue !== target[prop]) {
           onChange?.();
         }
         return Reflect.set(target, prop, newValue, receiver);
       },
-    });
+    })
+    wrapped.set(result, ctx);
+
+    return result;
   };
 
   /** @param {any} obj */
@@ -131,6 +133,7 @@ const __jsx = mod(() => {
   let nextVersion = 0;
   const /** @type {WeakMap<Getter, Set<Set<Listener>>>} */ stateSources = new WeakMap();
   let /** @type {null | Derived} */ currentDerived = null;
+
   /** @template T @param {T} value @param {Comparator<T>} eq @returns {Accessor<T>} */
   const $state = (value, eq = Object.is) => {
     const /** @type {Set<() => void>} */ listeners = new Set();
@@ -205,9 +208,15 @@ const __jsx = mod(() => {
     return result;
   };
 
+  /** @template [T2=unknown] @overload @param {Accessor<T2>} v @returns {T2} */
+  /** @template [T=unknown] @overload @param {MaybeGetter<T>} v @returns {T} */
+  /** @template [T=unknown] @param {MaybeGetter<T>} v */
+  const get = (v) => (typeof v == 'function' ? /** @type {Getter<T>} */ (v)() : v);
+
+  const E_NOT_IN_COMPONENT = "Effects can not be defined outside of a components";
   /** @param {() => void | (() => void)} cb @returns {void} */
   const $effect = (cb) => {
-    if (!currentEffectArea) throw new Error("Effects can not be defined outside of a components");
+    if (!currentEffectArea) throw new Error(E_NOT_IN_COMPONENT);
 
     let /** @type {null | (() => void)} */ destructor = null;
     let /** @type {Set<() => void>[]} */ prevStates = [];
@@ -238,7 +247,7 @@ const __jsx = mod(() => {
     });
     queueUpdate([listener]);
 
-    currentEffectArea.push(dispose);
+    currentEffectArea.add(dispose);
   };
 
   /** @template [T=void] @param {() => T} cb */
@@ -425,7 +434,7 @@ const __jsx = mod(() => {
 
   /** @param {Getter} getter */
   const $text = (getter) => {
-    const result = doc.createTextNode("");
+    const result = doc.createTextNode(untrack(getter));
     $effect(() => {
       const value = getter();
       result.data = value ? "" + value : "";
@@ -453,6 +462,8 @@ const __jsx = mod(() => {
 
   /** @param {[cond: () => any, render: () => JSXElement | JSXChunkArray][]} cases @param {() => JSXElement} [_default] */
   const $switch = (cases, _default) => {
+    if (!currentEffectArea) throw new Error(E_NOT_IN_COMPONENT);
+
     const anchor = makeAnchor();
     const /** @type {Node[]} */ chunk = [anchor];
     const area = currentEffectArea;
@@ -466,7 +477,7 @@ const __jsx = mod(() => {
     });
     $effect(() => effectArea(() => assignChunk(chunk, next()?.(), anchor), area));
     // onDestroy;
-    area?.push(() => {
+    area.add(() => {
       assignChunk(chunk, [], anchor);
       anchor.parentElement?.removeChild(anchor);
     });
@@ -483,6 +494,8 @@ const __jsx = mod(() => {
    * @param {(item: T) => unknown} [key]
    */
   const $each = (list, render, key) => {
+    if (!currentEffectArea) throw new Error(E_NOT_IN_COMPONENT);
+
     const /** @type {Map<unknown, CacheEntry>} */ cache = new Map();
     const anchor = makeAnchor();
     const /** @type {Node[]} */ chunk = [anchor];
@@ -499,7 +512,7 @@ const __jsx = mod(() => {
       }, area);
     });
     // onDestroy
-    area?.push(() => {
+    area.add(() => {
       assignChunk(chunk, [], anchor);
       anchor.parentElement?.removeChild(anchor);
     });
@@ -517,7 +530,7 @@ const __jsx = mod(() => {
     queueUpdate([
       () => {
         const cleaner = cb();
-        if (cleaner) area.push(cleaner);
+        if (cleaner) area.add(cleaner);
       },
     ]);
   };
@@ -526,7 +539,7 @@ const __jsx = mod(() => {
   const onDestroy = (cb) => {
     if (!currentEffectArea) throw new Error(E_HOOKS);
 
-    currentEffectArea.push(cb);
+    currentEffectArea.add(cb);
   };
 
   /** @param {() => JSXElement | JSXChunkArray} component @param {Element} target */
@@ -558,6 +571,7 @@ const __jsx = mod(() => {
     $portal,
     $switch,
     $each,
+    get,
     untrack,
     unwrap,
   };

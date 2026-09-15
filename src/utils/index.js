@@ -1,7 +1,6 @@
 const __utils = mod(async () => {
-  const { ENV } = await __config();
-
   const { trunc } = Math;
+  const { get } = await __jsx();
 
   /** @param {number} a @param {number} b */
   const gcd = (a, b) => {
@@ -27,12 +26,25 @@ const __utils = mod(async () => {
     return Math.round(x * d) / d;
   };
 
-  /** @template {Element} T @param {string} selector */
-  const $ = (selector) => {
-    const result = /** @type {T} */ (document.querySelector(selector));
-    if (ENV == "development" && !result) throw new Error("Element not found");
-    return result;
-  };
+  /** @param {number} x @returns {string} */
+  const fmt = (x) => `${Number.isFinite(x) ? roundTo(x, 6).toLocaleString() : "—"}`;
 
-  return { gcd, roundTo, $ };
+  /**
+   @typedef {{
+    (...classes: (string | false | null | undefined)[]): string;
+    (...classes: MaybeGetter<string | false | null | undefined>[]): () => string;
+   }} CN */
+
+  const cn = /** @type {CN} classes */ (
+    (...classes) =>
+      classes.some((i) => typeof i == "function")
+        ? () =>
+            classes
+              .map((i) => get(i))
+              .filter(Boolean)
+              .join(" ")
+        : classes.filter(Boolean).join(" ")
+  );
+
+  return { gcd, roundTo, fmt, cn };
 });
