@@ -9,8 +9,10 @@
 /** @template [T=any] @typedef {(value: T) => void} Setter */
 /** @template [T=any] @typedef {{ (): T; (v: T): void; }} Accessor */
 const __jsx = mod(() => {
+  const { $derived, $state, subtle: { $effect, currentDerived, queueUpdate, currentEffectArea, effectArea, untrack, unwrap } } = __reactivity();
   const SVG_NS = "http://www.w3.org/2000/svg",
     HTML_NS = "http://www.w3.org/1999/xhtml";
+  const E_NOT_IN_COMPONENT = "Effects can not be defined outside of a components";
 
   let /** @type {Document | XMLDocument} */ doc = document;
   let docNS = doc.lookupNamespaceURI("") || HTML_NS;
@@ -43,223 +45,10 @@ const __jsx = mod(() => {
     }
   };
 
-  /** @typedef {Set<() => void>} EffectArea */
-  let /** @type {EffectArea | null} */ currentEffectArea = null;
-  /** @param {(area: EffectArea) => void} cb @param {EffectArea | null} [parent] */
-  const effectArea = (cb, parent) => {
-    const prev = parent || currentEffectArea;
-    const /** @type {Set<() => void>} */ area = new Set();
-    currentEffectArea = area;
-    const dispose = () => {
-      if (prev) prev.delete(dispose);
-      for (const d of area) d();
-    };
-    try {
-      cb(area);
-      return dispose;
-    } finally {
-      prev?.add(dispose);
-      currentEffectArea = prev;
-    }
-  };
-
-  const /** @type {Set<() => void>} */ delayedUpdate = new Set();
-  let enqueued = false;
-  /** @param {Iterable<() => void>} listeners */
-  const queueUpdate = (listeners) => {
-    for (const listener of listeners) delayedUpdate.add(listener);
-
-    if (!enqueued) {
-      enqueued = true;
-      queueMicrotask(() => {
-        try {
-          const MAX_DEPTH = 20;
-          let depth = MAX_DEPTH;
-          let updates = 0;
-          for (; depth-- && delayedUpdate.size;) {
-            updates += delayedUpdate.size;
-            const snapshot = [...delayedUpdate];
-            delayedUpdate.clear();
-            for (const listener of snapshot) listener();
-          }
-          // console.debug(`[jsx-debug] Depth: ${MAX_DEPTH - depth}; updates: ${updates}`);
-          if (depth == 0 && delayedUpdate.size) {
-            console.warn("[jsx] Too many updates. The dependency graph likely contains a cycle.");
-          }
-        } finally {
-          delayedUpdate.clear();
-          enqueued = false;
-        }
-      });
-    }
-  };
-
-  /** @typedef {{ original: {}; dispose(): void; }} WrapContext */
-  /** @template T @typedef {(prev: Readonly<T>, next: Readonly<T>) => boolean} Comparator */
-
-  const /** @type {WeakMap<{}|unknown[], WrapContext>} */ wrapped = new WeakMap();
-
-  /** @param {any} obj @param {() => void} [onChange] */
-  const wrap = (obj, onChange) => {
-    if (!obj || typeof obj != "object") return obj;
-
-    const /** @type {WrapContext} */ ctx = {
-        original: obj,
-        dispose() {
-          onChange = undefined;
-        },
-      };
-    const result = new Proxy(obj, {
-      set(target, prop, newValue, receiver) {
-        if (newValue !== target[prop]) {
-          onChange?.();
-        }
-        return Reflect.set(target, prop, newValue, receiver);
-      },
-    })
-    wrapped.set(result, ctx);
-
-    return result;
-  };
-
-  /** @param {any} obj */
-  const unwrap = (obj) => wrapped.get(obj)?.original || obj;
-
-  /**
-   * @typedef {{ v: number }} Versioned
-   * @typedef {() => void} Listener
-   * @typedef {{ s: Set<Getter & Versioned>; l: Set<Set<Listener>> }} Derived
-   */
-  let nextVersion = 0;
-  const /** @type {WeakMap<Getter, Set<Set<Listener>>>} */ stateSources = new WeakMap();
-  let /** @type {null | Derived} */ currentDerived = null;
-
-  /** @template T @param {T} value @param {Comparator<T>} eq @returns {Accessor<T>} */
-  const $state = (value, eq = Object.is) => {
-    const /** @type {Set<() => void>} */ listeners = new Set();
-    const invalidate = () => {
-      result.v = ++nextVersion;
-      if (listeners.size) queueUpdate(listeners);
-    };
-    value = wrap(unwrap(value), invalidate);
-
-    /** @param {[] | [T]} args */
-    const result = (...args) => {
-      if (!args.length) {
-        if (currentDerived) {
-          currentDerived.s.add(result);
-          currentDerived.l.add(listeners);
-        }
-        return value;
-      }
-
-      if (args[0] === value || eq(args[0], value)) return;
-
-      const prev = wrapped.get(/** @type {{}} */ (value));
-      if (prev) prev.dispose();
-
-      value = wrap(unwrap(args[0]), invalidate);
-      invalidate();
-    };
-    result.v = ++nextVersion;
-
-    return /** @type {Accessor<T> } */ (result);
-  };
-
-  /** @template T @param {(v: T) => T} change */
-  const _derivedNode = (change) => {
-    let value = /** @type {T} */ (/** @type {unknown} */ (null));
-    const /** @type {Derived} */ node = { s: new Set(), l: new Set() };
-    const result = () => {
-      const prev = currentDerived;
-      currentDerived = node;
-      try {
-        if (!node.s.size || [...node.s].some((s) => (s(), s.v > result.v))) {
-          node.l.clear();
-          node.s.clear();
-          value = change(value);
-        }
-        if (prev) {
-          prev.s.add(result);
-          for (const l of node.l) prev.l.add(l);
-        }
-
-        return value;
-      } finally {
-        currentDerived = prev;
-      }
-    };
-    stateSources.set(result, node.l);
-    result.v = -1;
-    return result;
-  };
-
-  /** @template T @param {() => T} cb @param {Comparator<T>} eq @returns {Getter<T>} */
-  const $derived = (cb, eq = Object.is) => {
-    const result = _derivedNode((value) => {
-      const nextValue = cb();
-      if (result.v == -1 || !(nextValue === value || eq(value, nextValue))) {
-        value = nextValue;
-        result.v = ++nextVersion;
-      }
-      return value;
-    });
-
-    return result;
-  };
-
   /** @template [T2=unknown] @overload @param {Accessor<T2>} v @returns {T2} */
   /** @template [T=unknown] @overload @param {MaybeGetter<T>} v @returns {T} */
   /** @template [T=unknown] @param {MaybeGetter<T>} v */
   const get = (v) => (typeof v == 'function' ? /** @type {Getter<T>} */ (v)() : v);
-
-  const E_NOT_IN_COMPONENT = "Effects can not be defined outside of a components";
-  /** @param {() => void | (() => void)} cb @returns {void} */
-  const $effect = (cb) => {
-    if (!currentEffectArea) throw new Error(E_NOT_IN_COMPONENT);
-
-    let /** @type {null | (() => void)} */ destructor = null;
-    let /** @type {Set<() => void>[]} */ prevStates = [];
-    let disposed = false;
-    const clean = () => {
-      for (const listeners of prevStates) listeners.delete(listener);
-      destructor?.();
-    };
-    const dispose = () => {
-      clean();
-      destructor = null;
-      prevStates.length = 0;
-      disposed = true;
-    };
-
-    const listener = _derivedNode((clean) => {
-      clean?.();
-      const result = cb();
-      if (!disposed) {
-        prevStates = [...(stateSources.get(listener) || [])];
-        for (const listeners of prevStates) {
-          listeners.add(listener);
-        }
-      }
-      listener.v = ++nextVersion;
-
-      return result;
-    });
-    queueUpdate([listener]);
-
-    currentEffectArea.add(dispose);
-  };
-
-  /** @template [T=void] @param {() => T} cb */
-  const untrack = (cb) => {
-    const prev = currentDerived;
-    currentDerived = null;
-    try {
-      return cb();
-    } finally {
-      currentDerived = prev;
-    }
-  };
 
   /** @template {keyof HTMLElementTagNameMap} Tag1 @overload @param {'http://www.w3.org/1999/xhtml'} ns @param {Tag1} root @param {(root: HTMLElementTagNameMap[Tag1]) => void} block @returns {Document} */
   /** @template {keyof SVGElementTagNameMap} Tag2 @overload @param {'http://www.w3.org/2000/svg'} ns @param {Tag2} root @param {(root: SVGElementTagNameMap[Tag2]) => void} block @returns {Document} */
@@ -462,11 +251,11 @@ const __jsx = mod(() => {
 
   /** @param {[cond: () => any, render: () => JSXElement | JSXChunkArray][]} cases @param {() => JSXElement} [_default] */
   const $switch = (cases, _default) => {
-    if (!currentEffectArea) throw new Error(E_NOT_IN_COMPONENT);
+    const area = currentEffectArea();
+    if (!area) throw new Error(E_NOT_IN_COMPONENT);
 
     const anchor = makeAnchor();
     const /** @type {Node[]} */ chunk = [anchor];
-    const area = currentEffectArea;
     const next = $derived(() => {
       for (const [cond, render] of cases) {
         if (cond()) {
@@ -494,12 +283,12 @@ const __jsx = mod(() => {
    * @param {(item: T) => unknown} [key]
    */
   const $each = (list, render, key) => {
-    if (!currentEffectArea) throw new Error(E_NOT_IN_COMPONENT);
+    const area = currentEffectArea();
+    if (!area) throw new Error(E_NOT_IN_COMPONENT);
 
     const /** @type {Map<unknown, CacheEntry>} */ cache = new Map();
     const anchor = makeAnchor();
     const /** @type {Node[]} */ chunk = [anchor];
-    const area = currentEffectArea;
     $effect(() => {
       effectArea(() => {
         const /** @type {JSXElement[]} */ next = [];
@@ -524,7 +313,7 @@ const __jsx = mod(() => {
 
   /** @param {() => void | (() => void)} cb */
   const onMount = (cb) => {
-    const area = currentEffectArea;
+    const area = currentEffectArea();
     if (!area) throw new Error(E_HOOKS);
 
     queueUpdate([
@@ -537,9 +326,10 @@ const __jsx = mod(() => {
 
   /** @param {() => void} cb */
   const onDestroy = (cb) => {
-    if (!currentEffectArea) throw new Error(E_HOOKS);
+    const area = currentEffectArea();
+    if (!area) throw new Error(E_HOOKS);
 
-    currentEffectArea.add(cb);
+    area.add(cb);
   };
 
   /** @param {() => JSXElement | JSXChunkArray} component @param {Element} target */

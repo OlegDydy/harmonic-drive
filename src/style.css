@@ -323,6 +323,7 @@ input[type="number"] {
 
     &::after {
       left: calc(100% - var(--size) + var(--padding) + 2px);
+      background: var(--on-accent);
     }
   }
 
@@ -504,6 +505,12 @@ input[type="number"] {
   font-size: 0.75rem;
   line-height: 1.45;
   color: var(--on-surface-muted);
+
+  & .icon {
+    position: relative;
+    top: 2px;
+    margin-right: 0.5em;
+  }
 }
 
 .row-between {

@@ -3,7 +3,7 @@
  * @template T @param {() => T | Promise<T>} ctx @returns {() => Promise<T>}
  */
 function mod(ctx) {
-  /** @type {T} */ let module;
+  let /** @type {T} */ module;
   let initialized = false;
   return async () => {
     if (!initialized) {
@@ -13,3 +13,15 @@ function mod(ctx) {
     return module;
   };
 }
+/** @template T @param {() => T} ctx @returns {() => T} */
+mod.sync = (ctx) => {
+  let /** @type {T} */ module;
+  let initialized = false;
+  return () => {
+    if (!initialized) {
+      module = ctx();
+      initialized = true;
+    }
+    return module;
+  };
+};
