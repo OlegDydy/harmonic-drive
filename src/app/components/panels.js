@@ -1,5 +1,6 @@
 const __app_components_panels = mod(async () => {
   const { jsx, $state, $derived, $effect, $text } = await __jsx();
+  const t = __i18n();
   const { props, getProps, animation, rpm } = await __app_store();
   const { Entry, SwitchItem, Icon } = await __app_components_ui();
   const { download: downloadIcon, info } = await __app_components_icons();
@@ -19,7 +20,7 @@ const __app_components_panels = mod(async () => {
     return jsx("section", {
       class: "card",
       $: [
-        jsx("h2", { class: "card_title", $: ["Параметры"] }),
+        jsx("h2", { class: "card_title", $: [$text(t.statsTitle)] }),
         jsx("div", {
           class: "stats",
           $: [
@@ -30,14 +31,14 @@ const __app_components_panels = mod(async () => {
                   class: "stat_value",
                   $: [$text(() => `${fmt(gearRatio().num)} : ${fmt(gearRatio().denom)}`)],
                 }),
-                jsx("div", { class: "stat_label", $: ["Передаточное отношение"] }),
+                jsx("div", { class: "stat_label", $: [$text(t.statsGearRatio)] }),
               ],
             }),
             jsx("div", {
               class: "stat",
               $: [
                 jsx("div", { class: "stat_value", $: [$text(() => fmt(depended().zHard))] }),
-                jsx("div", { class: "stat_label", $: ["Волн жёсткого колеса"] }),
+                jsx("div", { class: "stat_label", $: [$text(t.statsWaves)] }),
               ],
             }),
           ],
@@ -50,18 +51,18 @@ const __app_components_panels = mod(async () => {
     return jsx("section", {
       class: "card",
       $: [
-        jsx("h2", { class: "card_title", $: ["Геометрия"] }),
+        jsx("h2", { class: "card_title", $: [$text(t.geomTitle)] }),
         jsx("div", {
           class: "fields",
           $: [
-            Entry({ value: props.zBalls, type: "number", label: "Тел качения", min: 1 }),
-            Entry({ value: props.zWaves, type: "number", label: "Волн волнообразователя", min: 1 }),
-            Entry({ value: props.thickness, type: "number", label: "Толщина жёсткого колеса", min: 0, step: 0.01 }),
-            Entry({ value: props.sepOffset, type: "number", label: "Отступ сепаратора", min: 0, step: 0.01 }),
+            Entry({ value: props.zBalls, type: "number", label: t.geomBodies, min: 1 }),
+            Entry({ value: props.zWaves, type: "number", label: t.geomWaves, min: 1 }),
+            Entry({ value: props.thickness, type: "number", label: t.geomThickness, min: 0, step: 0.01 }),
+            Entry({ value: props.sepOffset, type: "number", label: t.geomSpacer, min: 0, step: 0.01 }),
             Entry({
               value: props.rOuter,
               type: "number",
-              label: "Внешний радиус профиля",
+              label: t.geomOuterRadius,
               min: 0,
               step: 0.01,
               variant: "wide",
@@ -100,14 +101,14 @@ const __app_components_panels = mod(async () => {
     return jsx("section", {
       class: "card",
       $: [
-        jsx("h2", { class: "card_title", $: ["Базовая характеристика"] }),
+        jsx("h2", { class: "card_title", $: [$text(t.baseTitle)] }),
         jsx("div", {
           class: "base-list",
           $: [
             SwitchItem({
               key: "rIn",
               option: props.baseProp,
-              label: "Внутренний радиус",
+              label: t.baseInnerRadius,
               value: props.baseValue,
               readonlyValue: () => depended().rIn,
               step: 0.01,
@@ -116,7 +117,7 @@ const __app_components_panels = mod(async () => {
             SwitchItem({
               key: "e",
               option: props.baseProp,
-              label: "Эксцентриситет",
+              label: t.baseEccentricity,
               value: props.baseValue,
               readonlyValue: () => depended().e,
               step: 0.01,
@@ -124,7 +125,7 @@ const __app_components_panels = mod(async () => {
             SwitchItem({
               key: "rBall",
               option: props.baseProp,
-              label: "Радиус тел качения",
+              label: t.baseRadius,
               value: props.baseValue,
               readonlyValue: () => depended().rBall,
               step: 0.01,
@@ -132,7 +133,7 @@ const __app_components_panels = mod(async () => {
             SwitchItem({
               key: "hSep",
               option: props.baseProp,
-              label: "Толщина сепаратора",
+              label: t.baseSpacer,
               value: props.baseValue,
               readonlyValue: () => depended().hSep,
               step: 0.01,
@@ -141,7 +142,7 @@ const __app_components_panels = mod(async () => {
         }),
         jsx("p", {
           class: "hint",
-          $: [Icon({ icon: info, size: "1rem" }), "Остальные параметры пересчитываются из выбранного автоматически."],
+          $: [Icon({ icon: info, size: "1rem" }), $text(t.baseHint)],
         }),
       ],
     });
@@ -151,11 +152,11 @@ const __app_components_panels = mod(async () => {
     return jsx("section", {
       class: "card",
       $: [
-        jsx("h2", { class: "card_title", $: ["Анимация"] }),
+        jsx("h2", { class: "card_title", $: [$text(t.animTitle)] }),
         jsx("div", {
           class: "row-between",
           $: [
-            jsx("span", { class: "switch_label", $: ["Вращение волнообразователя"] }),
+            jsx("span", { class: "switch_label", $: [$text(t.animToggle)] }),
             jsx("label", {
               class: "switch",
               $: [
@@ -170,7 +171,7 @@ const __app_components_panels = mod(async () => {
           $: [
             jsx("input", { type: "range", min: 0, max: 300, class: "rpm_range", "bind:value": rpm }),
             jsx("input", { type: "number", min: 0, class: "input rpm_num", "bind:value": rpm }),
-            jsx("span", { class: "rpm_unit", $: ["об/мин"] }),
+            jsx("span", { class: "rpm_unit", $: [$text(t.animRPM)] }),
           ],
         }),
       ],
@@ -203,17 +204,17 @@ const __app_components_panels = mod(async () => {
     return jsx("section", {
       class: "card",
       $: [
-        jsx("h2", { class: "card_title", $: ["Экспорт"] }),
+        jsx("h2", { class: "card_title", $: [$text(t.exportTitle)] }),
         jsx("label", {
           class: "field",
           $: [
-            jsx("span", { class: "field_label", $: ["Приближение профиля"] }),
+            jsx("span", { class: "field_label", $: [$text(t.exportApprox)] }),
             jsx("select", {
               class: "select",
               "bind:value": outputStyle,
               $: [
-                jsx("option", { value: "polyline", $: ["Прямыми"] }),
-                jsx("option", { value: "bezier", $: ["Сплайнами"] }),
+                jsx("option", { value: "polyline", $: [$text(t.exportApproxLines)] }),
+                jsx("option", { value: "bezier", $: [$text(t.exportApproxSplines)] }),
               ],
             }),
           ],
@@ -226,14 +227,14 @@ const __app_components_panels = mod(async () => {
               class: "btn",
               disabled: () => (depended().error ? true : undefined),
               onclick: () => download(svgFile()),
-              $: [Icon({ icon: downloadIcon }), jsx("span", { $: ["Сохранить SVG"] })],
+              $: [Icon({ icon: downloadIcon }), jsx("span", { $: [$text(t.exportSvg)] })],
             }),
             jsx("button", {
               type: "button",
               class: "btn",
               disabled: () => (depended().error ? true : undefined),
               onclick: () => download(dxfFile()),
-              $: [Icon({ icon: downloadIcon }), jsx("span", { $: ["Сохранить DXF"] })],
+              $: [Icon({ icon: downloadIcon }), jsx("span", { $: [$text(t.exportDxf)] })],
             }),
           ],
         }),

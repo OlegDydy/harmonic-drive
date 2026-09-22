@@ -24,6 +24,7 @@ const __app_harmonicDrive = mod(async () => {
   const { approximate } = await __utils_approxBezier();
   const { roundTo } = await __utils();
   const { asin, atan2, sin, cos, sqrt, pow, PI } = Math;
+  const t = __i18n();
 
   /** @param {HarmonicDriveProps} props @returns {HarmonicDriveDependentProps}  */
   const calcDependentProperties = (props) => {
@@ -63,14 +64,14 @@ const __app_harmonicDrive = mod(async () => {
         hSep = baseValue;
         break;
       default:
-        error = "Неизвестная базовая характеристика";
+        error = t.errUnknownBase();
     }
 
     const zHard = props.zBalls + props.zWaves;
     const rDisk = rIn + e - 2 * rBall;
 
     if (rIn < (1.03 * (2 * rBall)) / sin(PI / zHard)) {
-      error = "Редуктор с заданными параметрами не может быть построен";
+      error = t.errImpossible();
     }
     return { rIn, e, rBall, hSep, zHard, rDisk, error };
   };

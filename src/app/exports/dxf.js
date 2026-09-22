@@ -6,6 +6,7 @@
  * @typedef {PartCircle | PartPolyline | PartSpline | PartArc} Part
  */
 const __app_exports_dxf = mod(async () => {
+  const t = __i18n();
   const { Vec2 } = await __utils_glMatrix();
   const { buildHarmonicDrive, calcDependentProperties } = await __app_harmonicDrive();
 
@@ -121,7 +122,7 @@ const __app_exports_dxf = mod(async () => {
   /** @param {string | number} value */
   const fmt = (value) => {
     if (typeof value === "string") return value;
-    if (!Number.isFinite(value)) throw new Error(`Некорректное значение: ${value}`);
+    if (!Number.isFinite(value)) throw new Error(`Incorrect value: ${value}`);
     return String(value === 0 ? 0 : value);
   };
 
@@ -231,9 +232,9 @@ const __app_exports_dxf = mod(async () => {
     const /** @type {Set<string>} */ seen = new Set();
     for (const l of layers) {
       if (typeof l.name !== "string" || l.name === "") {
-        throw new Error("Имя слоя не может быть пустым");
+        throw new Error("Layer name can not be empty");
       }
-      if (seen.has(l.name)) throw new Error(`Дублирующийся слой: "${l.name}"`);
+      if (seen.has(l.name)) throw new Error(`Layer duplication: "${l.name}"`);
       seen.add(l.name);
       toAci(l.color); // валидация цвета сразу
     }
@@ -460,22 +461,22 @@ const __app_exports_dxf = mod(async () => {
     return exportDxf(
       [
         {
-          name: "Жесткое колесо",
+          name: t.drawWheel(),
           color: "#0000ff",
           parts: parsePath(drive.hardWheel),
         },
         {
-          name: "Сепаратор",
+          name: t.drawSpacer(),
           color: "#ff0000",
           parts: parsePath(drive.separator),
         },
         {
-          name: "Волнообразователь",
+          name: t.drawWaveGen(),
           color: "#ff00ff",
           parts: parsePath(drive.waveGenerator),
         },
         {
-          name: "Тела качения",
+          name: t.drawBodies(),
           color: "#000080",
           parts: drive.balls.map(([cx, cy]) => ({ type: "circle", cx, cy, r: derived.rBall })),
         },

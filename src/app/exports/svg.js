@@ -1,14 +1,12 @@
 const __app_exports_svg = mod(async () => {
   const { jsx, xmlDocument } = await __jsx();
+  const t = await __i18n();
   const { buildHarmonicDrive, ballPositions, calcDependentProperties } = await __app_harmonicDrive();
-  const { gcd } = await __utils();
 
   /** @param {HarmonicDriveProps} props @param {'bezier'|'polyline'} style */
   const renderSvg = (props, unit = "mm", style = "polyline") => {
     const xml = xmlDocument("http://www.w3.org/2000/svg", "svg", (svg) => {
       const derived = calcDependentProperties(props);
-      const common = gcd(props.zBalls, props.zWaves);
-      const frac = [props.zBalls / common, props.zWaves / common];
       const offset = props.thickness + 1;
       const size = 2 * (props.rOuter + offset);
       const drive = buildHarmonicDrive(props, { points: 64, samples: 32, steps: style == "bezier" ? 100 : 0 });
@@ -17,12 +15,11 @@ const __app_exports_svg = mod(async () => {
       const crossHairSize = 0.1 * rDisk;
 
       const description =
-        `Чертежи волнового редуктора с ПТК и передаточным отношением ${frac[0]}:${frac[1]}\n\n` +
-        "Создан используя параметры:\n\n" +
+        "Geometry:\n\n" +
         "```json\n" +
         `${JSON.stringify(props, null, "  ")}\n` +
         "```\n" +
-        "Из чего были получены параметры:\n\n" +
+        "Evaluated props:\n\n" +
         "```json\n" +
         `${JSON.stringify(derived, null, "  ")}\n` +
         "```";
@@ -60,7 +57,7 @@ const __app_exports_svg = mod(async () => {
           jsx("g", {
             id: "layer-hard_wheel",
             "inkscape:groupmode": "layer",
-            "inkscape:label": "Жесткое колесо",
+            "inkscape:label": t.drawWheel(),
             stroke: "#00f",
             $: [
               jsx("path", {
@@ -73,14 +70,14 @@ const __app_exports_svg = mod(async () => {
           jsx("g", {
             id: "layer-separator",
             "inkscape:groupmode": "layer",
-            "inkscape:label": "Сепаратор",
+            "inkscape:label": t.drawSpacer(),
             stroke: "#f00",
             $: [jsx("path", { id: "separator", d: drive.separator })],
           }),
           jsx("g", {
             id: "layer-wave_gen",
             "inkscape:groupmode": "layer",
-            "inkscape:label": "Волнообразователь",
+            "inkscape:label": t.drawWaveGen(),
             stroke: "#f0f",
             $: [
               jsx("path", {
@@ -96,7 +93,7 @@ const __app_exports_svg = mod(async () => {
           jsx("g", {
             id: "layer-balls",
             "inkscape:groupmode": "layer",
-            "inkscape:label": "Тела качения",
+            "inkscape:label": t.drawBodies(),
             stroke: "#008",
             $: balls.map((point) =>
               jsx("circle", {

@@ -1,10 +1,11 @@
 const __app_components_drawing = mod(async () => {
-  const { jsx, $switch, $each, $state, $derived, $effect, unwrap } = await __jsx();
+  const { jsx, $switch, $text, $each, $state, $derived, $effect, unwrap } = await __jsx();
   const { buildHarmonicDrive, ballPositions } = await __app_harmonicDrive();
   const { animation, getProps, props, rpm } = await __app_store();
   const { alert, cog } = await __app_components_icons();
   const { Icon } = await __app_components_ui();
   const { roundTo } = await __utils();
+  const t = __i18n();
 
   /** @type {FC<{ depended: Getter<HarmonicDriveDependentProps> }, Element>} */
   const Drawing = ({ depended }) => {
@@ -82,10 +83,7 @@ const __app_components_drawing = mod(async () => {
           $: [
             jsx("div", { class: "logo", $: [Icon({ icon: cog, size: 22 })] }),
             jsx("div", {
-              $: [
-                jsx("h1", { $: ["Генератор волнового редуктора"] }),
-                jsx("p", { $: ["с промежуточными телами качения"] }),
-              ],
+              $: [jsx("h1", { $: [$text(t.appTitle)] }), jsx("p", { $: [$text(t.appSubtitle)] })],
             }),
           ],
         }),
@@ -160,19 +158,19 @@ const __app_components_drawing = mod(async () => {
               $: [
                 jsx("li", {
                   class: "legend_item",
-                  $: [jsx("span", { class: "legend_marker", style: `background: var(--c-hard)` }), "Жёсткое колесо"],
+                  $: [jsx("span", { class: "legend_marker", style: `background: var(--c-hard)` }), $text(t.drawWheel)],
                 }),
                 jsx("li", {
                   class: "legend_item",
-                  $: [jsx("span", { class: "legend_marker", style: `background: var(--c-sep)` }), "Сепаратор"],
+                  $: [jsx("span", { class: "legend_marker", style: `background: var(--c-sep)` }), $text(t.drawSpacer)],
                 }),
                 jsx("li", {
                   class: "legend_item",
-                  $: [jsx("span", { class: "legend_marker", style: `background: var(--c-wave)` }), "Волнообразователь"],
+                  $: [jsx("span", { class: "legend_marker", style: `background: var(--c-wave)` }), $text(t.drawWaveGen)],
                 }),
                 jsx("li", {
                   class: "legend_item",
-                  $: [jsx("span", { class: "legend_marker", style: `background: var(--c-ball)` }), "Тела качения"],
+                  $: [jsx("span", { class: "legend_marker", style: `background: var(--c-ball)` }), $text(t.drawBodies)],
                 }),
               ],
             }),
@@ -184,11 +182,9 @@ const __app_components_drawing = mod(async () => {
                     class: "canvas_error",
                     $: [
                       Icon({ icon: alert, size: 40 }),
-                      jsx("strong", { $: ["Невозможно построить"] }),
+                      jsx("strong", { $: [$text(t.drawError)] }),
                       jsx("span", {
-                        $: [
-                          "Редуктор с заданными параметрами геометрически не существует — проверьте геометрию и базовую характеристику.",
-                        ],
+                        $: [$text(t.drawErrorHint)],
                       }),
                     ],
                   }),

@@ -45,7 +45,7 @@ const __app_components_ui = mod(async () => {
       $: [jsx("path", { d: icon })],
     });
 
-  /** @template {string} T @param {{ key: T; option: Accessor<T>; label: string; value: Accessor<number>; readonlyValue: Getter<number>; max?: MaybeGetter<number>; min?: MaybeGetter<number>; step?: MaybeGetter<number>; }} props */
+  /** @template {string} T @param {{ key: T; option: Accessor<T>; label: MaybeGetter<string>; value: Accessor<number>; readonlyValue: Getter<number>; max?: MaybeGetter<number>; min?: MaybeGetter<number>; step?: MaybeGetter<number>; }} props */
   const SwitchItem = ({ key, option, label, value, readonlyValue, min, max, step }) =>
     jsx("label", {
       class: cn("base-list_row", () => get(option) == key && "_active"),
@@ -58,7 +58,7 @@ const __app_components_ui = mod(async () => {
           "bind:group": option,
         }),
         jsx("span", { class: "base-list_marker" }),
-        jsx("span", { class: "base-list_label", $: [label] }),
+        jsx("span", { class: "base-list_label", $: [$text(label)] }),
         $switch(
           [
             [

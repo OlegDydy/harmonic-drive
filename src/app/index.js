@@ -1,5 +1,6 @@
 const __app = mod(async () => {
   const { jsx, $text, $switch, $derived } = await __jsx();
+  const { appTitle, appSubtitle } = __i18n();
   const { calcDependentProperties } = await __app_harmonicDrive();
   const { getProps } = await __app_store();
   const { ParamsCard, Geometry, BaseProperty, AnimationCard, ExportCard } = await __app_components_panels();
@@ -20,10 +21,7 @@ const __app = mod(async () => {
             $: [
               jsx("div", { class: "logo", $: [Icon({ icon: cog, size: 22 })] }),
               jsx("div", {
-                $: [
-                  jsx("h1", { $: ["Генератор волнового редуктора"] }),
-                  jsx("p", { $: ["с промежуточными телами качения"] }),
-                ],
+                $: [jsx("h1", { $: [$text(appTitle)] }), jsx("p", { $: [$text(appSubtitle)] })],
               }),
             ],
           }),
@@ -36,7 +34,7 @@ const __app = mod(async () => {
                   () => [
                     jsx("div", {
                       class: "error",
-                      $: [Icon({ icon: alert, size: '1rem' }), jsx("span", { $: [$text(() => depended().error)] })],
+                      $: [Icon({ icon: alert, size: "1rem" }), jsx("span", { $: [$text(() => depended().error)] })],
                     }),
                   ],
                 ],

@@ -221,8 +221,10 @@ const __jsx = mod(() => {
 
   const makeAnchor = () => doc.createComment("");
 
-  /** @param {Getter} getter */
+  /** @param {MaybeGetter<unknown>} getter */
   const $text = (getter) => {
+    if (typeof getter !== 'function') return "" + getter;
+
     const result = doc.createTextNode(untrack(getter));
     $effect(() => {
       const value = getter();
