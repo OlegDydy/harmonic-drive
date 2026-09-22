@@ -4,6 +4,7 @@ const __app_components_drawing = mod(async () => {
   const { animation, getProps, props, rpm } = await __app_store();
   const { alert, cog } = await __app_components_icons();
   const { Icon } = await __app_components_ui();
+  const { Controls } = await __app_components_controls();
   const { roundTo } = await __utils();
   const t = __i18n();
 
@@ -79,12 +80,13 @@ const __app_components_drawing = mod(async () => {
       $: [
         jsx("header", {
           class: "panel_head",
-          "aria-hidden": true,
           $: [
             jsx("div", { class: "logo", $: [Icon({ icon: cog, size: 22 })] }),
             jsx("div", {
+              class: "panel_head_info",
               $: [jsx("h1", { $: [$text(t.appTitle)] }), jsx("p", { $: [$text(t.appSubtitle)] })],
             }),
+            Controls(),
           ],
         }),
         jsx("div", {

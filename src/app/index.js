@@ -6,6 +6,7 @@ const __app = mod(async () => {
   const { ParamsCard, Geometry, BaseProperty, AnimationCard, ExportCard } = await __app_components_panels();
   const Drawing = await __app_components_drawing();
   const { Icon } = await __app_components_ui();
+  const { Controls } = await __app_components_controls();
   const { alert, cog } = await __app_components_icons();
 
   /** @type {FC} */
@@ -21,8 +22,10 @@ const __app = mod(async () => {
             $: [
               jsx("div", { class: "logo", $: [Icon({ icon: cog, size: 22 })] }),
               jsx("div", {
+                class: "panel_head_info",
                 $: [jsx("h1", { $: [$text(appTitle)] }), jsx("p", { $: [$text(appSubtitle)] })],
               }),
+              Controls(),
             ],
           }),
           jsx("div", {

@@ -225,7 +225,7 @@ const __jsx = mod(() => {
   const $text = (getter) => {
     if (typeof getter !== 'function') return "" + getter;
 
-    const result = doc.createTextNode(untrack(getter));
+    const result = doc.createTextNode(untrack(/** @type {Getter<any>} */ (getter)));
     $effect(() => {
       const value = getter();
       result.data = value ? "" + value : "";

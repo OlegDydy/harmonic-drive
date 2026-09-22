@@ -40,6 +40,11 @@ const __i18n = mod.sync(() => {
    * @prop {string} drawBodies
    * @prop {string} drawError
    * @prop {string} drawErrorHint
+   * @prop {string} switchLanguage
+   * @prop {string} switchTheme
+   * @prop {string} themeSystem
+   * @prop {string} themeLight
+   * @prop {string} themeDark
    */
   const DEFAULT_LOCALE = "en";
   const locale = $state(/** @type {Locales} */ (DEFAULT_LOCALE));
@@ -49,7 +54,7 @@ const __i18n = mod.sync(() => {
     /** @type {Lang} */
     en: {
       _plural: new Intl.PluralRules("en-US"),
-      appTitle: "Harmonic Drive Generator",
+      appTitle: "Harmonic Drive",
       appSubtitle: "With intermediate rolling bodies",
       statsTitle: "Parameters",
       statsGearRatio: "Gear ratio",
@@ -83,10 +88,15 @@ const __i18n = mod.sync(() => {
       drawSpacer: "Spacer",
       drawWaveGen: "Wave generator",
       drawBodies: "Rolling bodies",
+      switchLanguage: "Switch language",
+      switchTheme: "Switch theme",
+      themeSystem: "System",
+      themeLight: "Light",
+      themeDark: "Dark",
     },
     ru: {
       _plural: new Intl.PluralRules("ru-RU"),
-      appTitle: "Генератор волнового редуктора",
+      appTitle: "Волновой редуктор",
       appSubtitle: "с промежуточными телами качения",
       statsTitle: "Параметры",
       statsGearRatio: "Передаточное отношение",
@@ -121,6 +131,11 @@ const __i18n = mod.sync(() => {
       drawSpacer: "Сепаратор",
       drawWaveGen: "Волнообразователь",
       drawBodies: "Тела качения",
+      switchLanguage: "Переключить язык",
+      switchTheme: "Переключить тему",
+      themeSystem: "Системная",
+      themeLight: "Светлая",
+      themeDark: "Тёмная",
     },
   };
   const fallback = locales[DEFAULT_LOCALE];
@@ -130,7 +145,7 @@ const __i18n = mod.sync(() => {
 
   return {
     locale,
-    localesAvailable: () => Object.keys(locales),
+    localesAvailable: () => /** @type {Locales[]} */ (Object.keys(locales)),
     appTitle: get("appTitle"),
     appSubtitle: get("appSubtitle"),
     statsTitle: get("statsTitle"),
@@ -165,5 +180,10 @@ const __i18n = mod.sync(() => {
     drawSpacer: get("drawSpacer"),
     drawWaveGen: get("drawWaveGen"),
     drawBodies: get("drawBodies"),
+    switchLanguage: get("switchLanguage"),
+    switchTheme: get("switchTheme"),
+    themeSystem: get("themeSystem"),
+    themeLight: get("themeLight"),
+    themeDark: get("themeDark"),
   };
 });

@@ -3,6 +3,7 @@ document.addEventListener(
   async () => {
     const { render, $effect } = await __jsx();
     const { locale, localesAvailable } = await __i18n();
+    const { theme, applyTheme, STORE_KEY: THEME_STORE } = __app_theme();
     const App = await __app();
 
     const mountPoint = document.querySelector("#app");
@@ -26,7 +27,12 @@ document.addEventListener(
 
     render(() => {
       $effect(() => {
-        localStorage.setItem(LOCALE_STORE, locale())
+        localStorage.setItem(LOCALE_STORE, locale());
+        document.documentElement.lang = locale();
+      });
+      $effect(() => {
+        applyTheme(theme());
+        localStorage.setItem(THEME_STORE, theme());
       });
       return App({})
     }, mountPoint);
