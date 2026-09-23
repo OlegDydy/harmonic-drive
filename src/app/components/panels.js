@@ -1,13 +1,13 @@
-const __app_components_panels = mod(async () => {
-  const { jsx, $state, $derived, $effect, $text } = await __jsx();
+const __app_components_panels = mod.sync(() => {
+  const { jsx, $state, $derived, $effect, $text } = __jsx();
   const t = __i18n();
-  const { props, getProps, animation, rpm } = await __app_store();
-  const { Entry, SwitchItem, Icon } = await __app_components_ui();
-  const { download: downloadIcon, info } = await __app_components_icons();
-  const { calcDependentProperties } = await __app_harmonicDrive();
-  const { gcd, fmt } = await __utils();
-  const { renderDxf, MIME: dxfMime } = await __app_exports_dxf();
-  const renderSvg = await __app_exports_svg();
+  const { props, getProps, animation, rpm } = __app_store();
+  const { Entry, SwitchItem, Icon } = __app_components_ui();
+  const { download: downloadIcon, info } = __app_components_icons();
+  const { calcDependentProperties } = __app_harmonicDrive();
+  const { gcd, fmt } = __utils();
+  const { renderDxf, MIME: dxfMime } = __app_exports_dxf();
+  const renderSvg = __app_exports_svg();
 
   /** @type {FC<{ depended: Getter<HarmonicDriveDependentProps> }>} */
   const ParamsCard = ({ depended }) => {

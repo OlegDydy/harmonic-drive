@@ -8,8 +8,8 @@
 /** @template [T=any] @typedef {(() => T) | T} MaybeGetter */
 /** @template [T=any] @typedef {(value: T) => void} Setter */
 /** @template [T=any] @typedef {{ (): T; (v: T): void; }} Accessor */
-const __jsx = mod(() => {
-  const { $derived, $state, subtle: { $effect, currentDerived, queueUpdate, currentEffectArea, effectArea, untrack, unwrap } } = __reactivity();
+const __jsx = mod.sync(() => {
+  const { $derived, $state, subtle: { $effect, queueUpdate, currentEffectArea, effectArea, untrack, unwrap } } = __reactivity();
   const SVG_NS = "http://www.w3.org/2000/svg",
     HTML_NS = "http://www.w3.org/1999/xhtml";
   const E_NOT_IN_COMPONENT = "Effects can not be defined outside of a components";

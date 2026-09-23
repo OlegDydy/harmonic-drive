@@ -1,7 +1,7 @@
-const __app_exports_svg = mod(async () => {
-  const { jsx, xmlDocument } = await __jsx();
-  const t = await __i18n();
-  const { buildHarmonicDrive, ballPositions, calcDependentProperties } = await __app_harmonicDrive();
+const __app_exports_svg = mod.sync(() => {
+  const { jsx, xmlDocument } = __jsx();
+  const t = __i18n();
+  const { buildHarmonicDrive, ballPositions, calcDependentProperties } = __app_harmonicDrive();
 
   /** @param {HarmonicDriveProps} props @param {'bezier'|'polyline'} style */
   const renderSvg = (props, unit = "mm", style = "polyline") => {

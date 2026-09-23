@@ -6,8 +6,8 @@
  * @prop {Vec2Like} [tangent1] Constraint of first handle
  * @prop {Vec2Like} [tangent2] Constraint of second handle
  */
-const __utils_approxBezier = mod(async () => {
-  const { Vec2 } = await __utils_glMatrix();
+const __utils_approxBezier = mod.sync(() => {
+  const { Vec2 } = __utils_glMatrix();
 
   /**
    * Cubic Bezier curve sampler on range

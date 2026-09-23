@@ -1,6 +1,6 @@
-const __utils = mod(async () => {
+const __utils = mod.sync(() => {
   const { trunc } = Math;
-  const { get } = await __jsx();
+  const { get } = __jsx();
 
   /** @param {number} a @param {number} b */
   const gcd = (a, b) => {

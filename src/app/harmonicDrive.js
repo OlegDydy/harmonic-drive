@@ -19,10 +19,10 @@
  * @prop {number} rDisk Radius of wave generator
  * @prop {string | null} error
  */
-const __app_harmonicDrive = mod(async () => {
-  const { Vec2, Mat2d } = await __utils_glMatrix();
-  const { approximate } = await __utils_approxBezier();
-  const { roundTo } = await __utils();
+const __app_harmonicDrive = mod.sync(() => {
+  const { Vec2, Mat2d } = __utils_glMatrix();
+  const { approximate } = __utils_approxBezier();
+  const { roundTo } = __utils();
   const { asin, atan2, sin, cos, sqrt, pow, PI } = Math;
   const t = __i18n();
 

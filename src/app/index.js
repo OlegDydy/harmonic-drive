@@ -1,13 +1,13 @@
-const __app = mod(async () => {
-  const { jsx, $text, $switch, $derived } = await __jsx();
+const __app = mod.sync(() => {
+  const { jsx, $text, $switch, $derived } = __jsx();
   const { appTitle, appSubtitle } = __i18n();
-  const { calcDependentProperties } = await __app_harmonicDrive();
-  const { getProps } = await __app_store();
-  const { ParamsCard, Geometry, BaseProperty, AnimationCard, ExportCard } = await __app_components_panels();
-  const Drawing = await __app_components_drawing();
-  const { Icon } = await __app_components_ui();
-  const { Controls } = await __app_components_controls();
-  const { alert, cog } = await __app_components_icons();
+  const { calcDependentProperties } = __app_harmonicDrive();
+  const { getProps } = __app_store();
+  const { ParamsCard, Geometry, BaseProperty, AnimationCard, ExportCard } = __app_components_panels();
+  const Drawing = __app_components_drawing();
+  const { Icon } = __app_components_ui();
+  const { Controls } = __app_components_controls();
+  const { alert, cog } = __app_components_icons();
 
   /** @type {FC} */
   const App = () => {

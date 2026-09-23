@@ -5,10 +5,10 @@
  * @typedef {{ type: 'arc'; c: Vec2Like; r: number; start: number; end: number; }} PartArc
  * @typedef {PartCircle | PartPolyline | PartSpline | PartArc} Part
  */
-const __app_exports_dxf = mod(async () => {
+const __app_exports_dxf = mod.sync(() => {
   const t = __i18n();
-  const { Vec2 } = await __utils_glMatrix();
-  const { buildHarmonicDrive, calcDependentProperties } = await __app_harmonicDrive();
+  const { Vec2 } = __utils_glMatrix();
+  const { buildHarmonicDrive, calcDependentProperties } = __app_harmonicDrive();
 
   const { atan2, abs, sqrt, max } = Math;
 

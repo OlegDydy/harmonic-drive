@@ -1,5 +1,5 @@
-const __app_store = mod(async () => {
-  const { $state } = await __jsx();
+const __app_store = mod.sync(() => {
+  const { $state } = __jsx();
 
   const props = {
     thickness: $state(1),

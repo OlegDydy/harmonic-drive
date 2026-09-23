@@ -1,10 +1,10 @@
 document.addEventListener(
   "DOMContentLoaded",
   async () => {
-    const { render, $effect } = await __jsx();
-    const { locale, localesAvailable } = await __i18n();
+    const { render, $effect } = __jsx();
+    const { locale, localesAvailable } = __i18n();
     const { theme, applyTheme, STORE_KEY: THEME_STORE } = __app_theme();
-    const App = await __app();
+    const App = __app();
 
     const mountPoint = document.querySelector("#app");
     if (!mountPoint) throw new Error("Can not mount app");
@@ -12,7 +12,7 @@ document.addEventListener(
     const LOCALE_STORE = 'locale';
     /** @returns {any} */
     const loadLocale = () => {
-      const available = localesAvailable();
+      const available = /** @type {string[]} */ (localesAvailable());
       const stored = localStorage.getItem(LOCALE_STORE);
       if (stored && available.includes(stored)) return stored;
 

@@ -1,11 +1,11 @@
-const __app_components_drawing = mod(async () => {
-  const { jsx, $switch, $text, $each, $state, $derived, $effect, unwrap } = await __jsx();
-  const { buildHarmonicDrive, ballPositions } = await __app_harmonicDrive();
-  const { animation, getProps, props, rpm } = await __app_store();
-  const { alert, cog } = await __app_components_icons();
-  const { Icon } = await __app_components_ui();
-  const { Controls } = await __app_components_controls();
-  const { roundTo } = await __utils();
+const __app_components_drawing = mod.sync(() => {
+  const { jsx, $switch, $text, $each, $state, $derived, $effect, unwrap } = __jsx();
+  const { buildHarmonicDrive, ballPositions } = __app_harmonicDrive();
+  const { animation, getProps, props, rpm } = __app_store();
+  const { alert, cog } = __app_components_icons();
+  const { Icon } = __app_components_ui();
+  const { Controls } = __app_components_controls();
+  const { roundTo } = __utils();
   const t = __i18n();
 
   /** @type {FC<{ depended: Getter<HarmonicDriveDependentProps> }, Element>} */

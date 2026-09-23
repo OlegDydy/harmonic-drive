@@ -1,4 +1,4 @@
-const __app_components_icons = mod(() => {
+const __app_components_icons = mod.sync(() => {
   // Integrated Lucide icons https://lucide.dev/
   const alert =
     "M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12,9 12,13M12,17 12,17.01";

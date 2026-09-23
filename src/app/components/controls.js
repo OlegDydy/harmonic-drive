@@ -1,9 +1,9 @@
-const __app_components_controls = mod(async () => {
-  const { jsx, $text, $switch } = await __jsx();
+const __app_components_controls = mod.sync(() => {
+  const { jsx, $text, $switch } = __jsx();
   const t = __i18n();
   const { theme, nextTheme } = __app_theme();
-  const { Icon } = await __app_components_ui();
-  const { monitor, sun, moon } = await __app_components_icons();
+  const { Icon } = __app_components_ui();
+  const { monitor, sun, moon } = __app_components_icons();
 
   /** @typedef {ReturnType<(typeof t)['localesAvailable']>[0]} Locales */
 

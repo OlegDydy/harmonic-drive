@@ -1,6 +1,6 @@
-const __app_components_ui = mod(async () => {
-  const { jsx, $switch, $text, get } = await __jsx();
-  const { fmt, cn } = await __utils();
+const __app_components_ui = mod.sync(() => {
+  const { jsx, $switch, $text, get } = __jsx();
+  const { fmt, cn } = __utils();
 
   /**
    * @template T @typedef {object} FieldProps

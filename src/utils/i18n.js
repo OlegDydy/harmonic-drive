@@ -54,8 +54,8 @@ const __i18n = mod.sync(() => {
     /** @type {Lang} */
     en: {
       _plural: new Intl.PluralRules("en-US"),
-      appTitle: "Harmonic Drive",
-      appSubtitle: "With intermediate rolling bodies",
+      appTitle: "Harmonic Gearing",
+      appSubtitle: "with intermediate rolling bodies",
       statsTitle: "Parameters",
       statsGearRatio: "Gear ratio",
       statsWaves: "Hard wheel waves",

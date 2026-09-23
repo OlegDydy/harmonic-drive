@@ -1,6 +1,6 @@
 /** @typedef {[x: number, y: number]} Vec2Like */
 /** @typedef {[a: number, b: number, c: number, d: number, tx: number, ty: number]} Mat2dLike */
-const __utils_glMatrix = mod(() => {
+const __utils_glMatrix = mod.sync(() => {
   const Vec2 = {
     /** @param {number} x @param {number} y @returns {Vec2Like} */
     create: (x = 0, y = 0) => [x, y],
