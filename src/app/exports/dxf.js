@@ -417,7 +417,6 @@ const __app_exports_dxf = mod.sync(() => {
             lastPart.points.push(Vec2.copy([0, 0], cursor));
             break;
           case "C":
-            console.log("[dxf] Cubic curve (abs)");
             lastPart = ensureSpline();
             lastPart.points.push(readPoint(m[2]));
             lastPart.points.push(readPoint());
@@ -425,7 +424,6 @@ const __app_exports_dxf = mod.sync(() => {
             lastPart.points.push(Vec2.copy([0, 0], cursor));
             break;
           case "c":
-            console.log("[dxf] Cubic curve (rel)");
             lastPart = ensureSpline();
             lastPart.points.push(Vec2.add([0, 0], cursor, readPoint(m[2])));
             lastPart.points.push(Vec2.add([0, 0], cursor, readPoint()));

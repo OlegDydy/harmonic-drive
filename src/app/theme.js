@@ -1,5 +1,5 @@
 const __app_theme = mod.sync(() => {
-  const { $state } = __reactivity();
+  const { $state } = __jsx();
 
   /** @type {Array<'system' | 'light' | 'dark'>} */
   const THEMES = ["system", "light", "dark"];

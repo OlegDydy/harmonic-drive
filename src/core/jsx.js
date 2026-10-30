@@ -9,10 +9,166 @@
 /** @template [T=any] @typedef {(value: T) => void} Setter */
 /** @template [T=any] @typedef {{ (): T; (v: T): void; }} Accessor */
 const __jsx = mod.sync(() => {
-  const { $derived, $state, subtle: { $effect, queueUpdate, currentEffectArea, effectArea, untrack, unwrap } } = __reactivity();
+  const {
+    State,
+    Computed,
+    subtle: { Watcher, untrack },
+  } = __signals();
+
+  /** @typedef {Set<() => void>} EffectArea */
+  /** @template {{}} [T={}] @typedef {{ original: T; dispose(): void; dirty: boolean; }} WrapContext */
+
   const SVG_NS = "http://www.w3.org/2000/svg",
     HTML_NS = "http://www.w3.org/1999/xhtml";
   const E_NOT_IN_COMPONENT = "Effects can not be defined outside of a components";
+  const E_HOOKS = "life cycle hooks can not be called outside of component";
+  const RAW = Symbol("raw");
+
+  /** @template T @param {T} value @returns {value is (NonNullable<T> & { [RAW]: WrapContext<T> })} */
+  const isWrapped = (value) => value != null && typeof value == "object" && RAW in value;
+
+  /** @param {any} obj @param {() => void} [onChange] */
+  const wrap = (obj, onChange) => {
+    if (!obj || typeof obj != "object") return obj;
+
+    const /** @type {WrapContext} */ ctx = {
+        original: obj,
+        dirty: false,
+        dispose() {
+          onChange = undefined;
+        },
+      };
+    const result = new Proxy(obj, {
+      set(target, prop, newValue, receiver) {
+        if (prop != RAW && newValue !== target[prop]) {
+          ctx.dirty = true;
+          onChange?.();
+        }
+        return Reflect.set(target, prop, newValue, receiver);
+      },
+    });
+    result[RAW] = ctx;
+
+    return result;
+  };
+
+  /** @template T @param {T} obj @returns {T} */
+  const unwrap = (obj) => (isWrapped(obj) ? obj[RAW].original : obj);
+
+  /** @template [T=unknown] @param {T} value @param {(v: T) => T} process @param {(a: T, b: T) => boolean} equals @returns {Accessor<T>} */
+  const _state = (value, process, equals) => {
+    value = process(unwrap(value));
+    const signal = new State(value, { equals });
+    return /** @type {Accessor<T>} */ (
+      /** @param {[value: T]|[]} args */
+      (...args) => {
+        if (!args.length) return signal.get();
+
+        const next = unwrap(args[0]);
+        if (isWrapped(value)) {
+          const ctx = value[RAW];
+          if (ctx.original === next) {
+            signal.set(value);
+            ctx.dirty = false;
+            return;
+          } else {
+            ctx.dispose();
+          }
+        }
+
+        value = process(next);
+        signal.set(value);
+      }
+    );
+  };
+
+  /** @template T @param {T} value @param {(a: T, b: T) => boolean} eq @returns {Accessor<T>} */
+  const $state = (value, eq = Object.is) => {
+    const result = /** @type {typeof _state<T>} */ (_state)(
+      value,
+      (v) => wrap(v, () => result(v)),
+      (prev, next) => {
+        if (isWrapped(prev) && prev[RAW].dirty) return false;
+        return eq(prev, next);
+      },
+    );
+    return result;
+  };
+  /** @template T @param {T} value @param {(a: T, b: T) => boolean} eq @returns {Accessor<T>} */
+  $state.raw = (value, eq = Object.is) => /** @type {typeof _state<T>} */ (_state)(value, (i) => i, eq);
+
+  /** @template T @param {() => T} cb @param {(a: T, b: T) => boolean} equals @returns {Getter<T>} */
+  const $derived = (cb, equals = Object.is) => {
+    const signal = new Computed(cb, { equals });
+    return () => signal.get();
+  };
+
+  let queued = false;
+  const MAX_DEPTH = 20;
+  const queueEffect = () => {
+    if (!queued) {
+      queued = true;
+      queueMicrotask(() => {
+        try {
+          let depth = MAX_DEPTH;
+          // let updated = 0;
+          let /** @type {Signal[]} */ snapshot;
+          while (depth-- && (snapshot = effects.getPending()).length) {
+            // updated += snapshot.length;
+            for (const effector of snapshot) effector.get();
+          }
+          // console.debug(`[jsx-debug] Depth: ${MAX_DEPTH - depth}; updated: ${updated}`);
+          if (depth == 0 && (snapshot = effects.getPending()).length) {
+            console.warn("[jsx] Too many updates. The dependency graph likely contains a cycle.", snapshot);
+          }
+        } finally {
+          queued = false;
+        }
+      });
+    }
+  };
+
+  let /** @type {EffectArea | null} */ currentEffectArea = null;
+
+  /** @param {(area: EffectArea) => void} cb @param {EffectArea | null} [parent] */
+  const effectArea = (cb, parent) => {
+    const prev = parent || currentEffectArea;
+    const /** @type {EffectArea} */ area = new Set();
+    currentEffectArea = area;
+    const dispose = () => {
+      if (prev) prev.delete(dispose);
+      for (const d of area) d();
+    };
+    try {
+      cb(area);
+      return dispose;
+    } finally {
+      prev?.add(dispose);
+      currentEffectArea = prev;
+    }
+  };
+
+  const effects = new Watcher(queueEffect);
+
+  /** @param {() => (() => void) | void} cb */
+  const $effect = (cb) => {
+    if (!currentEffectArea) throw new Error(E_NOT_IN_COMPONENT);
+
+    let /** @type {(() => void) | void} */ cleanup;
+    const signal = new Computed(() => {
+      cleanup?.();
+      cleanup = cb();
+    });
+    const dispose = () => {
+      cleanup?.();
+      cleanup = undefined;
+      effects.unwatch(signal);
+    };
+
+    effects.watch(signal);
+    queueEffect();
+    currentEffectArea.add(dispose);
+  };
 
   let /** @type {Document | XMLDocument} */ doc = document;
   let docNS = doc.lookupNamespaceURI("") || HTML_NS;
@@ -48,7 +204,7 @@ const __jsx = mod.sync(() => {
   /** @template [T2=unknown] @overload @param {Accessor<T2>} v @returns {T2} */
   /** @template [T=unknown] @overload @param {MaybeGetter<T>} v @returns {T} */
   /** @template [T=unknown] @param {MaybeGetter<T>} v */
-  const get = (v) => (typeof v == 'function' ? /** @type {Getter<T>} */ (v)() : v);
+  const get = (v) => (typeof v == "function" ? /** @type {Getter<T>} */ (v)() : v);
 
   /** @template {keyof HTMLElementTagNameMap} Tag1 @overload @param {'http://www.w3.org/1999/xhtml'} ns @param {Tag1} root @param {(root: HTMLElementTagNameMap[Tag1]) => void} block @returns {Document} */
   /** @template {keyof SVGElementTagNameMap} Tag2 @overload @param {'http://www.w3.org/2000/svg'} ns @param {Tag2} root @param {(root: SVGElementTagNameMap[Tag2]) => void} block @returns {Document} */
@@ -223,7 +379,7 @@ const __jsx = mod.sync(() => {
 
   /** @param {MaybeGetter<unknown>} getter */
   const $text = (getter) => {
-    if (typeof getter !== 'function') return "" + getter;
+    if (typeof getter !== "function") return "" + getter;
 
     const result = doc.createTextNode(untrack(/** @type {Getter<any>} */ (getter)));
     $effect(() => {
@@ -253,7 +409,7 @@ const __jsx = mod.sync(() => {
 
   /** @param {[cond: () => any, render: () => JSXElement | JSXChunkArray][]} cases @param {() => JSXElement} [_default] */
   const $switch = (cases, _default) => {
-    const area = currentEffectArea();
+    const area = currentEffectArea;
     if (!area) throw new Error(E_NOT_IN_COMPONENT);
 
     const anchor = makeAnchor();
@@ -266,7 +422,12 @@ const __jsx = mod.sync(() => {
       }
       return _default;
     });
-    $effect(() => effectArea(() => assignChunk(chunk, next()?.(), anchor), area));
+    $effect(() =>
+      effectArea(() => {
+        const n = next()?.();
+        assignChunk(chunk, n, anchor);
+      }, area),
+    );
     // onDestroy;
     area.add(() => {
       assignChunk(chunk, [], anchor);
@@ -285,7 +446,7 @@ const __jsx = mod.sync(() => {
    * @param {(item: T) => unknown} [key]
    */
   const $each = (list, render, key) => {
-    const area = currentEffectArea();
+    const area = currentEffectArea;
     if (!area) throw new Error(E_NOT_IN_COMPONENT);
 
     const /** @type {Map<unknown, CacheEntry>} */ cache = new Map();
@@ -311,24 +472,12 @@ const __jsx = mod.sync(() => {
     return anchor;
   };
 
-  const E_HOOKS = "life cycle hooks can not be called outside of component";
-
   /** @param {() => void | (() => void)} cb */
-  const onMount = (cb) => {
-    const area = currentEffectArea();
-    if (!area) throw new Error(E_HOOKS);
-
-    queueUpdate([
-      () => {
-        const cleaner = cb();
-        if (cleaner) area.add(cleaner);
-      },
-    ]);
-  };
+  const onMount = (cb) => $effect(() => untrack(cb));
 
   /** @param {() => void} cb */
   const onDestroy = (cb) => {
-    const area = currentEffectArea();
+    const area = currentEffectArea;
     if (!area) throw new Error(E_HOOKS);
 
     area.add(cb);

@@ -77,6 +77,8 @@ const __app_components_panels = mod.sync(() => {
   const BaseProperty = ({ depended }) => {
     let prevBase = props.baseProp();
     $effect(() => {
+      if (props.baseProp() == prevBase) return;
+
       const _props = getProps();
       _props.baseProp = prevBase;
       const prevDerived = calcDependentProperties(_props);

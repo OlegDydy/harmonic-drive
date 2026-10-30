@@ -1,5 +1,5 @@
 const __i18n = mod.sync(() => {
-  const { $state } = __reactivity();
+  const { $state } = __jsx();
 
   /**
    * @typedef {'ru' | 'en'} Locales
